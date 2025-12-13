@@ -757,6 +757,7 @@ export default function SocksGame() {
   const bonesRef = useRef(bones);
   const containerRef = useRef(null);
   const [fireworks, setFireworks] = useState([]);
+  const [showSpawnAnimation, setShowSpawnAnimation] = useState(false);
   
   // Responsive sizing
   const [cellSize, setCellSize] = useState(() => calculateCellSize());
@@ -919,6 +920,10 @@ export default function SocksGame() {
     setHasDogTreat(false);
     setShowTreatMessage(false);
     setCatchersFrozen(false);
+    
+    // Show spawn animation
+    setShowSpawnAnimation(true);
+    setTimeout(() => setShowSpawnAnimation(false), 1500);
   }, [createCatchers]);
 
   const initGame = useCallback(() => {
@@ -1243,6 +1248,31 @@ export default function SocksGame() {
     return () => clearInterval(interval);
   }, [gameState, maze, level, catchersFrozen]);
 
+  // Find a valid random spawn position for catchers
+  const findValidCatcherSpawn = useCallback(() => {
+    const validPositions = [];
+    for (let y = 0; y < MAZE_HEIGHT; y++) {
+      for (let x = 0; x < MAZE_WIDTH; x++) {
+        if (maze[y]?.[x] === 0) {
+          // Not too close to Socks
+          const distFromSocks = Math.abs(x - socksRef.current.x) + Math.abs(y - socksRef.current.y);
+          // Not on the couch
+          const onCouch = x >= couchPosition.x && x < couchPosition.x + COUCH_WIDTH &&
+                         y >= couchPosition.y && y < couchPosition.y + COUCH_HEIGHT;
+          // Not at spawn point
+          const atSpawn = x === 1 && y === 1;
+          if (distFromSocks > 5 && !onCouch && !atSpawn) {
+            validPositions.push({ x, y });
+          }
+        }
+      }
+    }
+    if (validPositions.length > 0) {
+      return validPositions[Math.floor(Math.random() * validPositions.length)];
+    }
+    return { x: MAZE_WIDTH - 2, y: MAZE_HEIGHT - 2 }; // Fallback
+  }, [maze, couchPosition]);
+
   // Check collision with catchers (but not in safe zone)
   useEffect(() => {
     if (gameState !== 'playing') return;
@@ -1253,24 +1283,59 @@ export default function SocksGame() {
     
     if (inSafeZone) return; // Socks is safe on the couch!
     
-    const caught = catchers.some(c => c.x === socks.x && c.y === socks.y);
-    if (caught) {
-      setHeldDirection(null); // Stop movement
-      const newLives = lives - 1;
-      setLives(newLives);
-      
-      if (newLives <= 0) {
-        setGameState('lost');
+    const caughtCatcher = catchers.find(c => c.x === socks.x && c.y === socks.y);
+    
+    if (caughtCatcher) {
+      if (catchersFrozen) {
+        // Eat the frozen catcher!
+        setScore(s => s + 1000);
+        
+        // Remove the eaten catcher
+        const catcherId = caughtCatcher.id;
+        setCatchers(prev => prev.filter(c => c.id !== catcherId));
+        
+        // Spawn mini fireworks for eating
+        const colors = ['#87CEEB', '#00BFFF', '#1E90FF'];
+        const miniFireworks = [];
+        for (let i = 0; i < 5; i++) {
+          miniFireworks.push({
+            id: Date.now() + i + 1000,
+            x: socks.x * cellSize + cellSize / 2,
+            y: socks.y * cellSize + cellSize / 2,
+            color: colors[Math.floor(Math.random() * colors.length)],
+          });
+        }
+        setFireworks(prev => [...prev, ...miniFireworks]);
+        setTimeout(() => setFireworks(prev => prev.filter(f => !miniFireworks.find(m => m.id === f.id))), 800);
+        
+        // Respawn the catcher after 4 seconds
+        setTimeout(() => {
+          const newPos = findValidCatcherSpawn();
+          setCatchers(prev => [...prev, { id: Date.now(), x: newPos.x, y: newPos.y }]);
+        }, 4000);
       } else {
-        setGameState('caught');
+        // Normal catch - Socks loses a life
+        setHeldDirection(null); // Stop movement
+        const newLives = lives - 1;
+        setLives(newLives);
+        
+        if (newLives <= 0) {
+          setGameState('lost');
+        } else {
+          setGameState('caught');
+        }
       }
     }
-  }, [socks, catchers, lives, gameState, couchPosition]);
+  }, [socks, catchers, lives, gameState, couchPosition, catchersFrozen, cellSize, findValidCatcherSpawn]);
 
   const resumeAfterCatch = useCallback(() => {
     setSocks({ x: 1, y: 1, direction: 'right' });
     setCatchers(createCatchers(level));
     setGameState('playing');
+    
+    // Show spawn animation
+    setShowSpawnAnimation(true);
+    setTimeout(() => setShowSpawnAnimation(false), 1500);
   }, [level, createCatchers]);
 
   // Spawn fireworks
@@ -1534,6 +1599,15 @@ export default function SocksGame() {
         @keyframes zzz-float {
           0%, 100% { transform: translateY(0); opacity: 0.7; }
           50% { transform: translateY(-4px); opacity: 1; }
+        }
+        @keyframes spawn-ring {
+          0% { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes spawn-sparkle {
+          0% { transform: scale(0) rotate(0deg); opacity: 1; }
+          50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+          100% { transform: scale(0) rotate(360deg); opacity: 0; }
         }
       `}</style>
       <h1 style={{
@@ -2275,6 +2349,56 @@ export default function SocksGame() {
             socks.y >= couchPosition.y && socks.y < couchPosition.y + COUCH_HEIGHT
           }
         />
+        
+        {/* Spawn animation */}
+        {showSpawnAnimation && (
+          <div style={{
+            position: 'absolute',
+            left: socks.x * cellSize + cellSize / 2,
+            top: socks.y * cellSize + cellSize / 2,
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 15,
+          }}>
+            {/* Expanding rings */}
+            {[0, 1, 2].map(i => (
+              <div
+                key={`ring-${i}`}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: cellSize * 2,
+                  height: cellSize * 2,
+                  border: '3px solid #fbbf24',
+                  borderRadius: '50%',
+                  animation: `spawn-ring 1s ease-out ${i * 0.3}s infinite`,
+                }}
+              />
+            ))}
+            {/* Sparkle stars */}
+            {[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+              const angle = (i * 45) * (Math.PI / 180);
+              const distance = cellSize * 1.2;
+              return (
+                <div
+                  key={`sparkle-${i}`}
+                  style={{
+                    position: 'absolute',
+                    left: `calc(50% + ${Math.cos(angle) * distance}px)`,
+                    top: `calc(50% + ${Math.sin(angle) * distance}px)`,
+                    transform: 'translate(-50%, -50%)',
+                    fontSize: cellSize * 0.5,
+                    animation: `spawn-sparkle 1s ease-out ${i * 0.1}s infinite`,
+                  }}
+                >
+                  ✨
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* D-Pad for mobile controls */}
