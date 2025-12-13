@@ -615,6 +615,7 @@ export default function SocksGame() {
   const gameStateRef = useRef('start');
   const mazeRef = useRef(maze);
   const bonesRef = useRef(bones);
+  const containerRef = useRef(null);
   const [fireworks, setFireworks] = useState([]);
   
   // Level system
@@ -655,6 +656,13 @@ export default function SocksGame() {
       script.id = 'tailwind-cdn';
       script.src = 'https://cdn.tailwindcss.com';
       document.head.appendChild(script);
+    }
+  }, []);
+
+  // Auto-focus container for keyboard input
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.focus();
     }
   }, []);
 
@@ -797,6 +805,7 @@ export default function SocksGame() {
     const handleKeyDown = (e) => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
+        e.stopPropagation();
         
         let dir = null;
         switch (e.key) {
@@ -814,6 +823,11 @@ export default function SocksGame() {
     };
     
     const handleKeyUp = (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
       const keyToDir = {
         'ArrowUp': { dx: 0, dy: -1 },
         'ArrowDown': { dx: 0, dy: 1 },
@@ -829,8 +843,8 @@ export default function SocksGame() {
       }
     };
     
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    window.addEventListener('keyup', handleKeyUp, { passive: false });
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
@@ -1245,17 +1259,44 @@ export default function SocksGame() {
   }, [dogTreat, gameState, maze]);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      background: 'linear-gradient(to bottom, #166534, #14532d)',
-      padding: '16px',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
+    <div 
+      ref={containerRef}
+      tabIndex={0}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom, #166534, #14532d)',
+        padding: '16px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        boxSizing: 'border-box',
+        width: '100%',
+        position: 'relative',
+        outline: 'none',
+      }}
+      onKeyDown={(e) => {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault();
+        }
+      }}
+    >
       <style>{`
+        * {
+          box-sizing: border-box;
+        }
+        html, body {
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          width: 100%;
+          height: 100%;
+        }
+        #root {
+          width: 100%;
+          height: 100%;
+        }
         @keyframes pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
@@ -1945,7 +1986,7 @@ export default function SocksGame() {
         />
       </div>
 
-      <p className="text-gray-400 mt-4 text-sm">Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause</p>
+      <p style={{ color: '#9ca3af', marginTop: '16px', fontSize: '14px' }}>Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause</p>
     </div>
   );
 }
