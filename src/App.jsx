@@ -1,8 +1,28 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-const CELL_SIZE = 24;
+const DEFAULT_CELL_SIZE = 24;
 const MAZE_WIDTH = 21;
 const MAZE_HEIGHT = 17;
+
+// Calculate optimal cell size based on screen dimensions
+const calculateCellSize = () => {
+  if (typeof window === 'undefined') return DEFAULT_CELL_SIZE;
+  
+  const isMobile = window.innerWidth <= 768;
+  const padding = isMobile ? 20 : 40;
+  const headerHeight = isMobile ? 140 : 100; // Space for title, stats, and controls
+  const footerHeight = isMobile ? 160 : 60; // D-pad on mobile needs more space
+  
+  const availableWidth = window.innerWidth - padding * 2;
+  const availableHeight = window.innerHeight - headerHeight - footerHeight;
+  
+  const cellByWidth = Math.floor(availableWidth / MAZE_WIDTH);
+  const cellByHeight = Math.floor(availableHeight / MAZE_HEIGHT);
+  
+  // Use the smaller dimension to ensure it fits, with min/max constraints
+  const calculatedSize = Math.min(cellByWidth, cellByHeight);
+  return Math.max(16, Math.min(calculatedSize, 32)); // Between 16 and 32 pixels
+};
 
 // Maze generation using recursive backtracking
 const generateMaze = () => {
@@ -92,14 +112,14 @@ const placeBones = (maze) => {
   return bones;
 };
 
-const Dog = ({ x, y, direction, inSafeZone }) => (
+const Dog = ({ x, y, direction, inSafeZone, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -108,7 +128,7 @@ const Dog = ({ x, y, direction, inSafeZone }) => (
       zIndex: inSafeZone ? 10 : 6,
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE - 4} height={CELL_SIZE - 4}>
+    <svg viewBox="0 0 32 32" width={cellSize - 4} height={cellSize - 4}>
       {/* Body */}
       <ellipse cx="16" cy="18" rx="10" ry="8" fill="#8B4513" />
       {/* Head */}
@@ -133,14 +153,14 @@ const Dog = ({ x, y, direction, inSafeZone }) => (
   </div>
 );
 
-const DogCatcher = ({ x, y }) => (
+const DogCatcher = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -148,7 +168,7 @@ const DogCatcher = ({ x, y }) => (
       zIndex: 4,
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE - 2} height={CELL_SIZE - 2}>
+    <svg viewBox="0 0 32 32" width={cellSize - 2} height={cellSize - 2}>
       {/* Body */}
       <rect x="10" y="14" width="12" height="14" rx="2" fill="#4169E1" />
       {/* Head */}
@@ -167,20 +187,20 @@ const DogCatcher = ({ x, y }) => (
   </div>
 );
 
-const Bone = ({ x, y }) => (
+const Bone = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE + CELL_SIZE / 4,
-      top: y * CELL_SIZE + CELL_SIZE / 4,
-      width: CELL_SIZE / 2,
-      height: CELL_SIZE / 2,
+      left: x * cellSize + cellSize / 4,
+      top: y * cellSize + cellSize / 4,
+      width: cellSize / 2,
+      height: cellSize / 2,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
     }}
   >
-    <svg viewBox="0 0 24 12" width={CELL_SIZE / 2} height={CELL_SIZE / 4}>
+    <svg viewBox="0 0 24 12" width={cellSize / 2} height={cellSize / 4}>
       <ellipse cx="3" cy="3" rx="3" ry="3" fill="#F5F5DC" />
       <ellipse cx="3" cy="9" rx="3" ry="3" fill="#F5F5DC" />
       <ellipse cx="21" cy="3" rx="3" ry="3" fill="#F5F5DC" />
@@ -190,14 +210,14 @@ const Bone = ({ x, y }) => (
   </div>
 );
 
-const Drumstick = ({ x, y }) => (
+const Drumstick = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -205,7 +225,7 @@ const Drumstick = ({ x, y }) => (
       animation: 'pulse 0.5s ease-in-out infinite',
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE} height={CELL_SIZE}>
+    <svg viewBox="0 0 32 32" width={cellSize} height={cellSize}>
       {/* Meat part */}
       <ellipse cx="12" cy="14" rx="10" ry="8" fill="#D2691E" />
       <ellipse cx="12" cy="14" rx="8" ry="6" fill="#F4A460" />
@@ -223,14 +243,14 @@ const Drumstick = ({ x, y }) => (
   </div>
 );
 
-const Pizza = ({ x, y }) => (
+const Pizza = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -238,7 +258,7 @@ const Pizza = ({ x, y }) => (
       animation: 'pulse 0.5s ease-in-out infinite',
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE} height={CELL_SIZE}>
+    <svg viewBox="0 0 32 32" width={cellSize} height={cellSize}>
       {/* Pizza slice */}
       <path d="M16 4 L28 28 L4 28 Z" fill="#F4A460" />
       {/* Cheese */}
@@ -256,14 +276,14 @@ const Pizza = ({ x, y }) => (
   </div>
 );
 
-const Cookie = ({ x, y }) => (
+const Cookie = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -271,7 +291,7 @@ const Cookie = ({ x, y }) => (
       animation: 'pulse 0.5s ease-in-out infinite',
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE} height={CELL_SIZE}>
+    <svg viewBox="0 0 32 32" width={cellSize} height={cellSize}>
       {/* Cookie base */}
       <circle cx="16" cy="16" r="12" fill="#D2691E" />
       <circle cx="16" cy="16" r="10" fill="#DEB887" />
@@ -290,14 +310,14 @@ const Cookie = ({ x, y }) => (
   </div>
 );
 
-const TennisBall = ({ x, y }) => (
+const TennisBall = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -305,7 +325,7 @@ const TennisBall = ({ x, y }) => (
       animation: 'pulse 0.5s ease-in-out infinite',
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE} height={CELL_SIZE}>
+    <svg viewBox="0 0 32 32" width={cellSize} height={cellSize}>
       {/* Ball base */}
       <circle cx="16" cy="16" r="12" fill="#ADFF2F" />
       <circle cx="16" cy="16" r="11" fill="#9ACD32" />
@@ -324,14 +344,14 @@ const TennisBall = ({ x, y }) => (
   </div>
 );
 
-const Cheese = ({ x, y }) => (
+const Cheese = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -339,7 +359,7 @@ const Cheese = ({ x, y }) => (
       animation: 'pulse 0.5s ease-in-out infinite',
     }}
   >
-    <svg viewBox="0 0 32 32" width={CELL_SIZE} height={CELL_SIZE}>
+    <svg viewBox="0 0 32 32" width={cellSize} height={cellSize}>
       {/* Cheese wedge */}
       <path d="M4 24 L16 4 L28 24 Z" fill="#FFD700" />
       <path d="M4 24 L16 4 L28 24 Z" fill="#FFA500" fillOpacity="0.3" />
@@ -357,14 +377,14 @@ const Cheese = ({ x, y }) => (
   </div>
 );
 
-const DogTreat = ({ x, y }) => (
+const DogTreat = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
   <div
     style={{
       position: 'absolute',
-      left: x * CELL_SIZE,
-      top: y * CELL_SIZE,
-      width: CELL_SIZE,
-      height: CELL_SIZE,
+      left: x * cellSize,
+      top: y * cellSize,
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -373,7 +393,7 @@ const DogTreat = ({ x, y }) => (
       zIndex: 8,
     }}
   >
-    <svg viewBox="0 0 32 20" width={CELL_SIZE} height={CELL_SIZE * 0.625}>
+    <svg viewBox="0 0 32 20" width={cellSize} height={cellSize * 0.625}>
       {/* Dog bone treat */}
       <ellipse cx="5" cy="5" rx="5" ry="5" fill="#8B4513" />
       <ellipse cx="5" cy="15" rx="5" ry="5" fill="#8B4513" />
@@ -392,13 +412,13 @@ const DogTreat = ({ x, y }) => (
   </div>
 );
 
-const SpecialItem = ({ type, x, y }) => {
+const SpecialItem = ({ type, x, y, cellSize = DEFAULT_CELL_SIZE }) => {
   switch (type) {
-    case 'drumstick': return <Drumstick x={x} y={y} />;
-    case 'pizza': return <Pizza x={x} y={y} />;
-    case 'cookie': return <Cookie x={x} y={y} />;
-    case 'tennis': return <TennisBall x={x} y={y} />;
-    case 'cheese': return <Cheese x={x} y={y} />;
+    case 'drumstick': return <Drumstick x={x} y={y} cellSize={cellSize} />;
+    case 'pizza': return <Pizza x={x} y={y} cellSize={cellSize} />;
+    case 'cookie': return <Cookie x={x} y={y} cellSize={cellSize} />;
+    case 'tennis': return <TennisBall x={x} y={y} cellSize={cellSize} />;
+    case 'cheese': return <Cheese x={x} y={y} cellSize={cellSize} />;
     default: return null;
   }
 };
@@ -601,6 +621,116 @@ const Firework = ({ x, y, color }) => {
   );
 };
 
+// D-Pad component for mobile touch controls
+const DPad = ({ onDirectionStart, onDirectionEnd }) => {
+  const buttonStyle = {
+    width: '60px',
+    height: '60px',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    border: '2px solid rgba(255, 255, 255, 0.5)',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    color: 'white',
+    cursor: 'pointer',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    touchAction: 'manipulation',
+  };
+
+  const activeStyle = {
+    ...buttonStyle,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  };
+
+  const [activeDir, setActiveDir] = useState(null);
+
+  const handleStart = (dir, dirObj) => (e) => {
+    e.preventDefault();
+    setActiveDir(dir);
+    onDirectionStart(dirObj);
+  };
+
+  const handleEnd = (e) => {
+    e.preventDefault();
+    setActiveDir(null);
+    onDirectionEnd();
+  };
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '60px 60px 60px',
+      gridTemplateRows: '60px 60px 60px',
+      gap: '4px',
+      marginTop: '16px',
+    }}>
+      {/* Empty top-left */}
+      <div />
+      {/* Up button */}
+      <button
+        style={activeDir === 'up' ? activeStyle : buttonStyle}
+        onTouchStart={handleStart('up', { dx: 0, dy: -1 })}
+        onTouchEnd={handleEnd}
+        onMouseDown={handleStart('up', { dx: 0, dy: -1 })}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+      >
+        ▲
+      </button>
+      {/* Empty top-right */}
+      <div />
+      {/* Left button */}
+      <button
+        style={activeDir === 'left' ? activeStyle : buttonStyle}
+        onTouchStart={handleStart('left', { dx: -1, dy: 0 })}
+        onTouchEnd={handleEnd}
+        onMouseDown={handleStart('left', { dx: -1, dy: 0 })}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+      >
+        ◀
+      </button>
+      {/* Center - empty or could be a "stop" button */}
+      <div style={{
+        ...buttonStyle,
+        backgroundColor: 'rgba(139, 69, 19, 0.4)',
+        fontSize: '16px',
+      }}>
+        🐕
+      </div>
+      {/* Right button */}
+      <button
+        style={activeDir === 'right' ? activeStyle : buttonStyle}
+        onTouchStart={handleStart('right', { dx: 1, dy: 0 })}
+        onTouchEnd={handleEnd}
+        onMouseDown={handleStart('right', { dx: 1, dy: 0 })}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+      >
+        ▶
+      </button>
+      {/* Empty bottom-left */}
+      <div />
+      {/* Down button */}
+      <button
+        style={activeDir === 'down' ? activeStyle : buttonStyle}
+        onTouchStart={handleStart('down', { dx: 0, dy: 1 })}
+        onTouchEnd={handleEnd}
+        onMouseDown={handleStart('down', { dx: 0, dy: 1 })}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+      >
+        ▼
+      </button>
+      {/* Empty bottom-right */}
+      <div />
+    </div>
+  );
+};
+
 export default function SocksGame() {
   const [maze, setMaze] = useState(() => generateMaze());
   const [socks, setSocks] = useState({ x: 1, y: 1, direction: 'right' });
@@ -617,6 +747,10 @@ export default function SocksGame() {
   const bonesRef = useRef(bones);
   const containerRef = useRef(null);
   const [fireworks, setFireworks] = useState([]);
+  
+  // Responsive sizing
+  const [cellSize, setCellSize] = useState(() => calculateCellSize());
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
   
   // Level system
   const [level, setLevel] = useState(1);
@@ -664,6 +798,26 @@ export default function SocksGame() {
     if (containerRef.current) {
       containerRef.current.focus();
     }
+  }, []);
+
+  // Handle window resize for responsive sizing
+  useEffect(() => {
+    const handleResize = () => {
+      setCellSize(calculateCellSize());
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Touch control handlers
+  const handleTouchStart = useCallback((dir) => {
+    setHeldDirection(dir);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    setHeldDirection(null);
   }, []);
 
   // Keep refs in sync
@@ -949,8 +1103,8 @@ export default function SocksGame() {
           for (let i = 0; i < 20; i++) {
             winFireworks.push({
               id: Date.now() + i,
-              x: Math.random() * (MAZE_WIDTH * CELL_SIZE - 40) + 20,
-              y: Math.random() * (MAZE_HEIGHT * CELL_SIZE - 40) + 20,
+              x: Math.random() * (MAZE_WIDTH * cellSize - 40) + 20,
+              y: Math.random() * (MAZE_HEIGHT * cellSize - 40) + 20,
               color: colors[Math.floor(Math.random() * colors.length)],
             });
           }
@@ -1010,8 +1164,8 @@ export default function SocksGame() {
       for (let i = 0; i < 30; i++) {
         winFireworks.push({
           id: Date.now() + i,
-          x: Math.random() * (MAZE_WIDTH * CELL_SIZE - 40) + 20,
-          y: Math.random() * (MAZE_HEIGHT * CELL_SIZE - 40) + 20,
+          x: Math.random() * (MAZE_WIDTH * cellSize - 40) + 20,
+          y: Math.random() * (MAZE_HEIGHT * cellSize - 40) + 20,
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       }
@@ -1104,8 +1258,8 @@ export default function SocksGame() {
     for (let i = 0; i < 12; i++) {
       newFireworks.push({
         id: Date.now() + i,
-        x: Math.random() * (MAZE_WIDTH * CELL_SIZE - 40) + 20,
-        y: Math.random() * (MAZE_HEIGHT * CELL_SIZE - 40) + 20,
+        x: Math.random() * (MAZE_WIDTH * cellSize - 40) + 20,
+        y: Math.random() * (MAZE_HEIGHT * cellSize - 40) + 20,
         color: colors[Math.floor(Math.random() * colors.length)],
       });
     }
@@ -1171,8 +1325,8 @@ export default function SocksGame() {
       for (let i = 0; i < 8; i++) {
         newFireworks.push({
           id: Date.now() + Math.random(),
-          x: Math.random() * (MAZE_WIDTH * CELL_SIZE - 40) + 20,
-          y: Math.random() * (MAZE_HEIGHT * CELL_SIZE - 40) + 20,
+          x: Math.random() * (MAZE_WIDTH * cellSize - 40) + 20,
+          y: Math.random() * (MAZE_HEIGHT * cellSize - 40) + 20,
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       }
@@ -1350,7 +1504,7 @@ export default function SocksGame() {
         }
       `}</style>
       <h1 style={{
-        fontSize: '1.875rem',
+        fontSize: isMobile ? '1.25rem' : '1.875rem',
         fontWeight: 'bold',
         color: '#fbbf24',
         marginBottom: '8px',
@@ -1414,49 +1568,51 @@ export default function SocksGame() {
       
       <div style={{
         display: 'flex',
-        gap: '24px',
-        marginBottom: '12px',
+        gap: isMobile ? '12px' : '24px',
+        marginBottom: isMobile ? '8px' : '12px',
         color: 'white',
-        fontSize: '18px',
+        fontSize: isMobile ? '14px' : '18px',
         flexWrap: 'wrap',
         justifyContent: 'center',
+        padding: '0 8px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>Level:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px' }}>
+          <span>Lv:</span>
           <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{level}/{MAX_LEVEL}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>Lives:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {[...Array(lives)].map((_, i) => (
             <span key={i}>❤️</span>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>Specials:</span>
-          {collectedSpecials.length === 0 ? (
-            <span style={{ color: '#6b7280' }}>-</span>
-          ) : (
-            collectedSpecials.map((type, i) => (
-              <span key={i}>
-                {type === 'drumstick' && '🍗'}
-                {type === 'pizza' && '🍕'}
-                {type === 'cookie' && '🍪'}
-                {type === 'tennis' && '🎾'}
-                {type === 'cheese' && '🧀'}
-              </span>
-            ))
-          )}
-        </div>
-        <div>Score: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{score}</span></div>
-        <div>Bones left: <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{bones.length}</span></div>
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>Specials:</span>
+            {collectedSpecials.length === 0 ? (
+              <span style={{ color: '#6b7280' }}>-</span>
+            ) : (
+              collectedSpecials.map((type, i) => (
+                <span key={i}>
+                  {type === 'drumstick' && '🍗'}
+                  {type === 'pizza' && '🍕'}
+                  {type === 'cookie' && '🍪'}
+                  {type === 'tennis' && '🎾'}
+                  {type === 'cheese' && '🧀'}
+                </span>
+              ))
+            )}
+          </div>
+        )}
+        <div>{isMobile ? '' : 'Score: '}<span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{score}</span></div>
+        <div>🦴 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{bones.length}</span></div>
         {hasDogTreat && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#d97706', padding: '0 8px', borderRadius: '4px' }}>
-            <span>🦴 Carrying treat!</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#d97706', padding: '0 8px', borderRadius: '4px', fontSize: isMobile ? '12px' : '14px' }}>
+            <span>🦴 Got treat!</span>
           </div>
         )}
         
-        {/* Pause and Reset buttons - only show during gameplay */}
-        {(gameState === 'playing' || gameState === 'paused') && (
+        {/* Pause and Reset buttons - only show during gameplay on desktop */}
+        {!isMobile && (gameState === 'playing' || gameState === 'paused') && (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={togglePause}
@@ -1917,15 +2073,29 @@ export default function SocksGame() {
       <div
         className="relative rounded-lg shadow-2xl border-4 border-amber-700"
         style={{
-          width: MAZE_WIDTH * CELL_SIZE,
-          height: MAZE_HEIGHT * CELL_SIZE,
+          width: MAZE_WIDTH * cellSize,
+          height: MAZE_HEIGHT * cellSize,
           backgroundColor: getLevelSettings(level).floorColor,
         }}
       >
         {/* Treat message popup */}
         {showTreatMessage && (
-          <div className="absolute z-30 top-4 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-center animate-bounce shadow-lg">
-            🦴 Bring Daisy the treat to win the game! 🦴
+          <div style={{
+            position: 'absolute',
+            zIndex: 30,
+            top: '16px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#eab308',
+            color: 'black',
+            padding: '8px 16px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            fontSize: isMobile ? '12px' : '14px',
+          }}>
+            🦴 Bring Daisy the treat to win! 🦴
           </div>
         )}
 
@@ -1937,10 +2107,10 @@ export default function SocksGame() {
                 key={`${x}-${y}`}
                 style={{
                   position: 'absolute',
-                  left: x * CELL_SIZE,
-                  top: y * CELL_SIZE,
-                  width: CELL_SIZE,
-                  height: CELL_SIZE,
+                  left: x * cellSize,
+                  top: y * cellSize,
+                  width: cellSize,
+                  height: cellSize,
                   backgroundColor: getLevelSettings(level).wallColor,
                   borderRadius: 2,
                   boxShadow: 'inset 0 0 4px rgba(0,0,0,0.5)',
@@ -1952,17 +2122,17 @@ export default function SocksGame() {
 
         {/* Render bones */}
         {bones.map((bone, i) => (
-          <Bone key={i} x={bone.x} y={bone.y} />
+          <Bone key={i} x={bone.x} y={bone.y} cellSize={cellSize} />
         ))}
 
         {/* Render couch (safe zone) */}
-        <Couch x={couchPosition.x} y={couchPosition.y} cellSize={CELL_SIZE} />
+        <Couch x={couchPosition.x} y={couchPosition.y} cellSize={cellSize} />
 
         {/* Render special item */}
-        {specialItem && <SpecialItem type={specialItem.type} x={specialItem.x} y={specialItem.y} />}
+        {specialItem && <SpecialItem type={specialItem.type} x={specialItem.x} y={specialItem.y} cellSize={cellSize} />}
 
         {/* Render dog treat (Level 3 final challenge) */}
-        {dogTreat && <DogTreat x={dogTreat.x} y={dogTreat.y} />}
+        {dogTreat && <DogTreat x={dogTreat.x} y={dogTreat.y} cellSize={cellSize} />}
 
         {/* Render fireworks */}
         {fireworks.map(fw => (
@@ -1971,7 +2141,7 @@ export default function SocksGame() {
 
         {/* Render catchers */}
         {catchers.map(catcher => (
-          <DogCatcher key={catcher.id} x={catcher.x} y={catcher.y} />
+          <DogCatcher key={catcher.id} x={catcher.x} y={catcher.y} cellSize={cellSize} />
         ))}
 
         {/* Render Socks */}
@@ -1979,6 +2149,7 @@ export default function SocksGame() {
           x={socks.x} 
           y={socks.y} 
           direction={socks.direction} 
+          cellSize={cellSize}
           inSafeZone={
             socks.x >= couchPosition.x && socks.x < couchPosition.x + COUCH_WIDTH &&
             socks.y >= couchPosition.y && socks.y < couchPosition.y + COUCH_HEIGHT
@@ -1986,8 +2157,26 @@ export default function SocksGame() {
         />
       </div>
 
+      {/* D-Pad for mobile controls */}
+      {isMobile && (
+        <DPad 
+          onDirectionStart={handleTouchStart}
+          onDirectionEnd={handleTouchEnd}
+        />
+      )}
 
-      <p style={{ color: '#9ca3af', marginTop: '16px', fontSize: '14px' }}>Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause</p>
+      <p style={{ 
+        color: '#9ca3af', 
+        marginTop: '16px', 
+        fontSize: isMobile ? '12px' : '14px',
+        textAlign: 'center',
+        padding: '0 16px',
+      }}>
+        {isMobile 
+          ? 'Use the D-pad to move Socks • Hide on the couch to stay safe!'
+          : 'Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause'
+        }
+      </p>
     </div>
   );
 }
