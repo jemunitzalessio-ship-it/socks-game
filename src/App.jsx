@@ -1986,6 +1986,7 @@ export default function SocksGame() {
         />
       </div>
 
+
       <p style={{ color: '#9ca3af', marginTop: '16px', fontSize: '14px' }}>Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause</p>
     </div>
   );
