@@ -1129,12 +1129,18 @@ export default function SocksGame() {
             const pos = validPositions[Math.floor(Math.random() * validPositions.length)];
             setDogTreat({ x: pos.x, y: pos.y });
             setShowTreatMessage(true);
-            setTimeout(() => setShowTreatMessage(false), 4000);
+            setGameState('paused'); // Pause for the treat message
           }
         }
       }
     }
   }, [socks.x, socks.y, bones, gameState, level, maze, couchPosition]);
+
+  // Dismiss treat message and resume game
+  const dismissTreatMessage = useCallback(() => {
+    setShowTreatMessage(false);
+    setGameState('playing');
+  }, []);
 
   // Check for dog treat pickup (Level 3)
   useEffect(() => {
@@ -1533,11 +1539,12 @@ export default function SocksGame() {
             border: '2px solid #f59e0b',
             borderRadius: '8px',
             boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-            padding: '8px',
+            padding: '12px',
             zIndex: 100,
+            minWidth: '140px',
           }}>
             <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>Skip to level:</p>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
               {[1, 2, 3].map(lvl => (
                 <button
                   key={lvl}
@@ -1562,6 +1569,55 @@ export default function SocksGame() {
                 </button>
               ))}
             </div>
+            
+            {/* Pause and Reset buttons */}
+            {(gameState === 'playing' || gameState === 'paused') && (
+              <>
+                <div style={{ borderTop: '1px solid #374151', paddingTop: '12px', marginTop: '4px' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePause();
+                      setShowLevelSelect(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    {gameState === 'paused' ? '▶ Resume' : '⏸ Pause'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetGame();
+                      setShowLevelSelect(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔄 Reset Game
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </h1>
@@ -1648,8 +1704,8 @@ export default function SocksGame() {
         )}
       </div>
 
-      {/* Paused overlay */}
-      {gameState === 'paused' && (
+      {/* Paused overlay - only show if not showing treat message */}
+      {gameState === 'paused' && !showTreatMessage && (
         <div style={{
           position: 'absolute',
           zIndex: 20,
@@ -1690,6 +1746,59 @@ export default function SocksGame() {
               🔄 Reset Game
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Level 3 treat message modal */}
+      {showTreatMessage && (
+        <div style={{
+          position: 'absolute',
+          zIndex: 25,
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          borderRadius: '16px',
+          padding: isMobile ? '24px' : '32px',
+          textAlign: 'center',
+          border: '4px solid #eab308',
+          maxWidth: isMobile ? '300px' : '400px',
+        }}>
+          <div style={{ fontSize: isMobile ? '48px' : '64px', marginBottom: '16px' }}>🦴</div>
+          <h2 style={{ 
+            fontSize: isMobile ? '1.25rem' : '1.5rem', 
+            fontWeight: 'bold', 
+            color: '#eab308', 
+            marginBottom: '12px' 
+          }}>
+            Final Challenge!
+          </h2>
+          <p style={{ 
+            color: 'white', 
+            marginBottom: '8px',
+            fontSize: isMobile ? '14px' : '16px',
+          }}>
+            A special treat has appeared!
+          </p>
+          <p style={{ 
+            color: '#d1d5db', 
+            marginBottom: '20px',
+            fontSize: isMobile ? '14px' : '16px',
+          }}>
+            Catch it and bring it to Daisy on the couch to win the game!
+          </p>
+          <button
+            onClick={dismissTreatMessage}
+            style={{
+              padding: isMobile ? '12px 24px' : '14px 32px',
+              backgroundColor: '#eab308',
+              color: 'black',
+              fontWeight: 'bold',
+              fontSize: isMobile ? '16px' : '18px',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Let's do it! 🐕
+          </button>
         </div>
       )}
 
@@ -2078,27 +2187,6 @@ export default function SocksGame() {
           backgroundColor: getLevelSettings(level).floorColor,
         }}
       >
-        {/* Treat message popup */}
-        {showTreatMessage && (
-          <div style={{
-            position: 'absolute',
-            zIndex: 30,
-            top: '16px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: '#eab308',
-            color: 'black',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            fontSize: isMobile ? '12px' : '14px',
-          }}>
-            🦴 Bring Daisy the treat to win! 🦴
-          </div>
-        )}
-
         {/* Render maze walls */}
         {maze.map((row, y) =>
           row.map((cell, x) =>
