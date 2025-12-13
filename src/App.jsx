@@ -153,7 +153,7 @@ const Dog = ({ x, y, direction, inSafeZone, cellSize = DEFAULT_CELL_SIZE }) => (
   </div>
 );
 
-const DogCatcher = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
+const DogCatcher = ({ x, y, cellSize = DEFAULT_CELL_SIZE, frozen = false }) => (
   <div
     style={{
       position: 'absolute',
@@ -166,6 +166,8 @@ const DogCatcher = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
       justifyContent: 'center',
       transition: 'left 0.15s, top 0.15s',
       zIndex: 4,
+      opacity: frozen ? 0.6 : 1,
+      filter: frozen ? 'hue-rotate(180deg) saturate(1.5)' : 'none',
     }}
   >
     <svg viewBox="0 0 32 32" width={cellSize - 2} height={cellSize - 2}>
@@ -183,6 +185,14 @@ const DogCatcher = ({ x, y, cellSize = DEFAULT_CELL_SIZE }) => (
       <line x1="24" y1="8" x2="30" y2="4" stroke="#8B4513" strokeWidth="2" />
       <circle cx="30" cy="4" r="4" fill="none" stroke="#696969" strokeWidth="1" />
       <path d="M27 2 Q30 4 27 6" stroke="#696969" strokeWidth="0.5" fill="none" />
+      {/* Frozen indicator */}
+      {frozen && (
+        <>
+          <circle cx="8" cy="4" r="2" fill="#87CEEB" opacity="0.8" />
+          <circle cx="24" cy="20" r="1.5" fill="#87CEEB" opacity="0.8" />
+          <circle cx="6" cy="16" r="1" fill="#87CEEB" opacity="0.8" />
+        </>
+      )}
     </svg>
   </div>
 );
@@ -769,6 +779,7 @@ export default function SocksGame() {
   const [collectedSpecials, setCollectedSpecials] = useState([]);
   const [spawnedSpecials, setSpawnedSpecials] = useState([]); // Track which types have already spawned
   const specialItemRef = useRef(null);
+  const [catchersFrozen, setCatchersFrozen] = useState(false); // Freeze catchers when special is caught
   
   // Safe zone - couch position (will be set during maze init)
   const [couchPosition, setCouchPosition] = useState({ x: 10, y: 7 });
@@ -887,11 +898,14 @@ export default function SocksGame() {
     setMaze(newMaze);
     setSocks({ x: 1, y: 1, direction: 'right' });
     
-    // Place bones but avoid the couch area
+    // Place bones but avoid the couch area and Place label below it
     const newBones = placeBones(newMaze).filter(bone => {
       const inCouch = bone.x >= couchX && bone.x < couchX + 5 &&
                       bone.y >= couchY && bone.y < couchY + 3;
-      return !inCouch;
+      // Also exclude the area below the couch where "Place" label appears
+      const inPlaceLabel = bone.x >= couchX + 1 && bone.x < couchX + 4 &&
+                           bone.y === couchY + 3;
+      return !inCouch && !inPlaceLabel;
     });
     setBones(newBones);
     
@@ -904,6 +918,7 @@ export default function SocksGame() {
     setDogTreat(null);
     setHasDogTreat(false);
     setShowTreatMessage(false);
+    setCatchersFrozen(false);
   }, [createCatchers]);
 
   const initGame = useCallback(() => {
@@ -952,6 +967,7 @@ export default function SocksGame() {
     setDogTreat(null);
     setHasDogTreat(false);
     setShowTreatMessage(false);
+    setCatchersFrozen(false);
   }, []);
 
     // Handle keyboard input
@@ -1181,7 +1197,7 @@ export default function SocksGame() {
 
   // Move catchers independently on their own timer (speed based on level)
   useEffect(() => {
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || catchersFrozen) return;
     
     const settings = getLevelSettings(level);
     
@@ -1225,7 +1241,7 @@ export default function SocksGame() {
     }, settings.catcherSpeed);
     
     return () => clearInterval(interval);
-  }, [gameState, maze, level]);
+  }, [gameState, maze, level, catchersFrozen]);
 
   // Check collision with catchers (but not in safe zone)
   useEffect(() => {
@@ -1383,6 +1399,10 @@ export default function SocksGame() {
       setCollectedSpecials(prev => [...prev, specialItem.type]);
       setSpecialItem(null);
       spawnFireworks();
+      
+      // Freeze catchers for 3 seconds
+      setCatchersFrozen(true);
+      setTimeout(() => setCatchersFrozen(false), 3000);
     }
   }, [socks, specialItem, gameState, spawnFireworks]);
 
@@ -1452,6 +1472,13 @@ export default function SocksGame() {
           overflow: hidden;
           width: 100%;
           height: 100%;
+          -webkit-user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+          user-select: none;
+          -webkit-touch-callout: none;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
         }
         #root {
           width: 100%;
@@ -1664,6 +1691,11 @@ export default function SocksGame() {
         {hasDogTreat && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#d97706', padding: '0 8px', borderRadius: '4px', fontSize: isMobile ? '12px' : '14px' }}>
             <span>🦴 Got treat!</span>
+          </div>
+        )}
+        {catchersFrozen && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#0ea5e9', padding: '0 8px', borderRadius: '4px', fontSize: isMobile ? '12px' : '14px', animation: 'pulse 0.5s ease-in-out infinite' }}>
+            <span>❄️ Frozen!</span>
           </div>
         )}
         
@@ -2229,7 +2261,7 @@ export default function SocksGame() {
 
         {/* Render catchers */}
         {catchers.map(catcher => (
-          <DogCatcher key={catcher.id} x={catcher.x} y={catcher.y} cellSize={cellSize} />
+          <DogCatcher key={catcher.id} x={catcher.x} y={catcher.y} cellSize={cellSize} frozen={catchersFrozen} />
         ))}
 
         {/* Render Socks */}
