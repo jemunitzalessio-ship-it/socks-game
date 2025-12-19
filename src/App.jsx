@@ -636,23 +636,27 @@ const DPad = ({ onDirectionStart, onDirectionEnd }) => {
   const buttonStyle = {
     width: '60px',
     height: '60px',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    border: '2px solid rgba(255, 255, 255, 0.5)',
-    borderRadius: '12px',
+    backgroundColor: 'rgba(0, 0, 40, 0.9)',
+    border: '3px solid #00ffff',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '24px',
-    color: 'white',
+    fontSize: '20px',
+    color: '#00ffff',
     cursor: 'pointer',
     userSelect: 'none',
     WebkitUserSelect: 'none',
     touchAction: 'manipulation',
+    boxShadow: '0 0 10px rgba(0, 255, 255, 0.3), 0 4px 0 #006666',
+    textShadow: '0 0 10px #00ffff',
   };
 
   const activeStyle = {
     ...buttonStyle,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(0, 255, 255, 0.3)',
+    boxShadow: '0 0 20px rgba(0, 255, 255, 0.8), 0 2px 0 #006666',
+    transform: 'translateY(2px)',
   };
 
   const [activeDir, setActiveDir] = useState(null);
@@ -706,8 +710,10 @@ const DPad = ({ onDirectionStart, onDirectionEnd }) => {
       {/* Center - empty or could be a "stop" button */}
       <div style={{
         ...buttonStyle,
-        backgroundColor: 'rgba(139, 69, 19, 0.4)',
+        backgroundColor: 'rgba(255, 0, 222, 0.3)',
+        border: '3px solid #ff00de',
         fontSize: '16px',
+        boxShadow: '0 0 10px rgba(255, 0, 222, 0.5)',
       }}>
         🐕
       </div>
@@ -1513,9 +1519,9 @@ export default function SocksGame() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom, #166534, #14532d)',
+        background: 'radial-gradient(ellipse at center, #1a0a2e 0%, #0d0015 50%, #000000 100%)',
         padding: '16px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: '"Press Start 2P", "Courier New", monospace',
         boxSizing: 'border-box',
         width: '100%',
         position: 'relative',
@@ -1528,6 +1534,8 @@ export default function SocksGame() {
       }}
     >
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
         * {
           box-sizing: border-box;
         }
@@ -1544,11 +1552,90 @@ export default function SocksGame() {
           -webkit-touch-callout: none;
           -webkit-tap-highlight-color: transparent;
           touch-action: manipulation;
+          background: #000;
         }
         #root {
           width: 100%;
           height: 100%;
         }
+        
+        /* Scanline effect */
+        .scanlines::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.15),
+            rgba(0, 0, 0, 0.15) 1px,
+            transparent 1px,
+            transparent 2px
+          );
+          pointer-events: none;
+          z-index: 100;
+        }
+        
+        /* Neon text glow */
+        .neon-text {
+          text-shadow: 
+            0 0 5px #fff,
+            0 0 10px #fff,
+            0 0 20px #ff00de,
+            0 0 30px #ff00de,
+            0 0 40px #ff00de;
+        }
+        
+        .neon-yellow {
+          text-shadow: 
+            0 0 5px #fff,
+            0 0 10px #fbbf24,
+            0 0 20px #fbbf24,
+            0 0 30px #f59e0b,
+            0 0 40px #f59e0b;
+        }
+        
+        /* Arcade button style */
+        .arcade-btn {
+          font-family: "Press Start 2P", monospace;
+          text-transform: uppercase;
+          border: 3px solid;
+          box-shadow: 
+            0 4px 0 #000,
+            0 0 10px currentColor,
+            inset 0 0 10px rgba(255,255,255,0.1);
+          transition: all 0.1s;
+        }
+        .arcade-btn:active {
+          transform: translateY(2px);
+          box-shadow: 
+            0 2px 0 #000,
+            0 0 10px currentColor;
+        }
+        
+        /* CRT screen glow for game area */
+        .crt-screen {
+          box-shadow: 
+            0 0 20px rgba(0, 255, 255, 0.3),
+            0 0 40px rgba(0, 255, 255, 0.2),
+            0 0 60px rgba(0, 255, 255, 0.1),
+            inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Blinking animation for INSERT COIN style */
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        
+        /* Star twinkle */
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 1; }
+        }
+        
         @keyframes pulse {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.15); }
@@ -1610,16 +1697,48 @@ export default function SocksGame() {
           100% { transform: scale(0) rotate(360deg); opacity: 0; }
         }
       `}</style>
+      
+      {/* Animated stars background */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}>
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              width: `${Math.random() * 3 + 1}px`,
+              height: `${Math.random() * 3 + 1}px`,
+              backgroundColor: ['#fff', '#ff00de', '#00ffff', '#ffff00'][Math.floor(Math.random() * 4)],
+              borderRadius: '50%',
+              animation: `twinkle ${Math.random() * 3 + 2}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 2}s`,
+              opacity: 0.5,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Title - hide on start screen since dialog has its own */}
       {gameState !== 'start' && (
       <h1 style={{
-        fontSize: isMobile ? '1.25rem' : '1.875rem',
+        fontSize: isMobile ? '0.9rem' : '1.5rem',
         fontWeight: 'bold',
         color: '#fbbf24',
-        marginBottom: '8px',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+        marginBottom: '12px',
+        textShadow: '0 0 10px #fbbf24, 0 0 20px #f59e0b, 0 0 30px #f59e0b, 2px 2px 0 #000',
         position: 'relative',
         zIndex: 100,
+        letterSpacing: '2px',
       }}>
         🐕 Socks' Bone Hunt{' '}
         <span 
@@ -1730,17 +1849,25 @@ export default function SocksGame() {
       {gameState !== 'start' && (
       <div style={{
         display: 'flex',
-        gap: isMobile ? '12px' : '24px',
+        gap: isMobile ? '10px' : '20px',
         marginBottom: isMobile ? '8px' : '12px',
-        color: 'white',
-        fontSize: isMobile ? '14px' : '18px',
+        color: '#00ffff',
+        fontSize: isMobile ? '10px' : '14px',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        padding: '0 8px',
+        padding: '10px 16px',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        border: '2px solid #00ffff',
+        borderRadius: '4px',
+        boxShadow: '0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 255, 255, 0.1)',
+        fontFamily: '"Press Start 2P", monospace',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px' }}>
-          <span>Lv:</span>
-          <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{level}/{MAX_LEVEL}</span>
+          <span style={{ color: '#ff00de' }}>LV</span>
+          <span style={{ color: '#ffff00', textShadow: '0 0 10px #ffff00' }}>{level}/{MAX_LEVEL}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {[...Array(lives)].map((_, i) => (
@@ -1749,9 +1876,9 @@ export default function SocksGame() {
         </div>
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>Specials:</span>
+            <span style={{ color: '#ff00de' }}>BONUS:</span>
             {collectedSpecials.length === 0 ? (
-              <span style={{ color: '#6b7280' }}>-</span>
+              <span style={{ color: '#666' }}>-</span>
             ) : (
               collectedSpecials.map((type, i) => (
                 <span key={i}>
@@ -1765,11 +1892,22 @@ export default function SocksGame() {
             )}
           </div>
         )}
-        <div>{isMobile ? '' : 'Score: '}<span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{score}</span></div>
-        <div>🦴 <span style={{ color: '#fbbf24', fontWeight: 'bold' }}>{bones.length}</span></div>
+        <div><span style={{ color: '#ff00de' }}>{isMobile ? '' : 'SCORE '}</span><span style={{ color: '#ffff00', textShadow: '0 0 10px #ffff00' }}>{score}</span></div>
+        <div>🦴 <span style={{ color: '#ffff00', textShadow: '0 0 10px #ffff00' }}>{bones.length}</span></div>
         {hasDogTreat && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#d97706', padding: '0 8px', borderRadius: '4px', fontSize: isMobile ? '12px' : '14px' }}>
-            <span>🦴 Got treat!</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px', 
+            backgroundColor: 'rgba(255, 255, 0, 0.2)', 
+            padding: '4px 10px', 
+            borderRadius: '4px', 
+            fontSize: isMobile ? '8px' : '10px',
+            border: '2px solid #ffff00',
+            boxShadow: '0 0 10px rgba(255, 255, 0, 0.5)',
+            animation: 'pulse 0.5s ease-in-out infinite',
+          }}>
+            <span style={{ color: '#ffff00' }}>🦴 GOT TREAT!</span>
           </div>
         )}
         
@@ -1779,32 +1917,40 @@ export default function SocksGame() {
             <button
               onClick={togglePause}
               style={{
-                padding: '4px 12px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
-                fontSize: '14px',
+                padding: '6px 14px',
+                backgroundColor: '#0066ff',
+                color: '#fff',
+                fontSize: '10px',
                 fontWeight: 'bold',
                 borderRadius: '4px',
-                border: 'none',
+                border: '2px solid #00ffff',
                 cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+                textTransform: 'uppercase',
+                boxShadow: '0 0 10px rgba(0, 255, 255, 0.5), 0 4px 0 #003399',
+                textShadow: '0 0 5px #00ffff',
               }}
             >
-              {gameState === 'paused' ? '▶ Resume' : '⏸ Pause'}
+              {gameState === 'paused' ? '▶ PLAY' : '⏸ STOP'}
             </button>
             <button
               onClick={resetGame}
               style={{
-                padding: '4px 12px',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                fontSize: '14px',
+                padding: '6px 14px',
+                backgroundColor: '#cc0000',
+                color: '#fff',
+                fontSize: '10px',
                 fontWeight: 'bold',
                 borderRadius: '4px',
-                border: 'none',
+                border: '2px solid #ff00de',
                 cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+                textTransform: 'uppercase',
+                boxShadow: '0 0 10px rgba(255, 0, 222, 0.5), 0 4px 0 #660000',
+                textShadow: '0 0 5px #ff00de',
               }}
             >
-              🔄 Reset
+              ↺ RESET
             </button>
           </div>
         )}
@@ -1816,41 +1962,57 @@ export default function SocksGame() {
         <div style={{
           position: 'absolute',
           zIndex: 20,
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          borderRadius: '12px',
+          backgroundColor: 'rgba(0, 0, 20, 0.95)',
+          borderRadius: '8px',
           padding: '32px',
           textAlign: 'center',
+          border: '4px solid #00ffff',
+          boxShadow: '0 0 30px rgba(0, 255, 255, 0.5), inset 0 0 30px rgba(0, 255, 255, 0.1)',
+          fontFamily: '"Press Start 2P", monospace',
         }}>
-          <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#60a5fa', marginBottom: '16px' }}>⏸ Paused</h2>
-          <p style={{ color: '#d1d5db', marginBottom: '16px' }}>Press ESC or P to resume</p>
+          <h2 style={{ 
+            fontSize: '1.2rem', 
+            fontWeight: 'bold', 
+            color: '#00ffff', 
+            marginBottom: '20px',
+            textShadow: '0 0 10px #00ffff, 0 0 20px #00ffff',
+            letterSpacing: '4px',
+          }}>⏸ PAUSED</h2>
+          <p style={{ color: '#ff00de', marginBottom: '20px', fontSize: '10px' }}>PRESS ESC OR P TO RESUME</p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
             <button
               onClick={togglePause}
               style={{
-                padding: '12px 24px',
-                backgroundColor: '#3b82f6',
+                padding: '12px 20px',
+                backgroundColor: '#0066ff',
                 color: 'white',
                 fontWeight: 'bold',
-                borderRadius: '8px',
-                border: 'none',
+                fontSize: '10px',
+                borderRadius: '4px',
+                border: '2px solid #00ffff',
                 cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+                boxShadow: '0 0 10px rgba(0, 255, 255, 0.5), 0 4px 0 #003399',
               }}
             >
-              ▶ Resume
+              ▶ RESUME
             </button>
             <button
               onClick={resetGame}
               style={{
-                padding: '12px 24px',
-                backgroundColor: '#ef4444',
+                padding: '12px 20px',
+                backgroundColor: '#cc0000',
                 color: 'white',
                 fontWeight: 'bold',
-                borderRadius: '8px',
-                border: 'none',
+                fontSize: '10px',
+                borderRadius: '4px',
+                border: '2px solid #ff00de',
                 cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+                boxShadow: '0 0 10px rgba(255, 0, 222, 0.5), 0 4px 0 #660000',
               }}
             >
-              🔄 Reset Game
+              ↺ RESET
             </button>
           </div>
         </div>
@@ -1861,50 +2023,59 @@ export default function SocksGame() {
         <div style={{
           position: 'absolute',
           zIndex: 25,
-          backgroundColor: 'rgba(0,0,0,0.9)',
-          borderRadius: '16px',
+          backgroundColor: 'rgba(0, 0, 20, 0.95)',
+          borderRadius: '8px',
           padding: isMobile ? '24px' : '32px',
           textAlign: 'center',
-          border: '4px solid #eab308',
+          border: '4px solid #ffff00',
+          boxShadow: '0 0 30px rgba(255, 255, 0, 0.5), 0 0 60px rgba(255, 0, 222, 0.3), inset 0 0 30px rgba(255, 255, 0, 0.1)',
           maxWidth: isMobile ? '300px' : '400px',
+          fontFamily: '"Press Start 2P", monospace',
         }}>
-          <div style={{ fontSize: isMobile ? '48px' : '64px', marginBottom: '16px' }}>🦴</div>
+          <div style={{ fontSize: isMobile ? '48px' : '64px', marginBottom: '16px', animation: 'pulse 0.5s ease-in-out infinite' }}>🦴</div>
           <h2 style={{ 
-            fontSize: isMobile ? '1.25rem' : '1.5rem', 
+            fontSize: isMobile ? '0.9rem' : '1.1rem', 
             fontWeight: 'bold', 
-            color: '#eab308', 
-            marginBottom: '12px' 
+            color: '#ffff00', 
+            marginBottom: '16px',
+            textShadow: '0 0 10px #ffff00, 0 0 20px #ff8800',
+            letterSpacing: '2px',
           }}>
-            Final Challenge!
+            FINAL CHALLENGE!
           </h2>
           <p style={{ 
-            color: 'white', 
-            marginBottom: '8px',
-            fontSize: isMobile ? '14px' : '16px',
+            color: '#00ffff', 
+            marginBottom: '12px',
+            fontSize: isMobile ? '8px' : '10px',
+            lineHeight: '1.8',
           }}>
-            A special treat has appeared!
+            A SPECIAL TREAT HAS APPEARED!
           </p>
           <p style={{ 
-            color: '#d1d5db', 
-            marginBottom: '20px',
-            fontSize: isMobile ? '14px' : '16px',
+            color: '#ff00de', 
+            marginBottom: '24px',
+            fontSize: isMobile ? '8px' : '10px',
+            lineHeight: '1.8',
           }}>
-            Catch it and bring it to Daisy on the couch to win the game!
+            BRING IT TO DAISY TO WIN!
           </p>
           <button
             onClick={dismissTreatMessage}
             style={{
-              padding: isMobile ? '12px 24px' : '14px 32px',
-              backgroundColor: '#eab308',
-              color: 'black',
+              padding: isMobile ? '12px 20px' : '14px 28px',
+              backgroundColor: '#ffff00',
+              color: '#000',
               fontWeight: 'bold',
-              fontSize: isMobile ? '16px' : '18px',
-              borderRadius: '8px',
-              border: 'none',
+              fontSize: isMobile ? '10px' : '12px',
+              borderRadius: '4px',
+              border: '3px solid #fff',
               cursor: 'pointer',
+              fontFamily: '"Press Start 2P", monospace',
+              boxShadow: '0 0 20px #ffff00, 0 6px 0 #888800',
+              letterSpacing: '1px',
             }}
           >
-            Let's do it! 🐕
+            LET'S GO! 🐕
           </button>
         </div>
       )}
@@ -1913,33 +2084,74 @@ export default function SocksGame() {
         <div style={{
           position: 'absolute',
           zIndex: 20,
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          borderRadius: '12px',
-          padding: '32px',
+          backgroundColor: 'rgba(0, 0, 20, 0.95)',
+          borderRadius: '8px',
+          padding: isMobile ? '24px' : '40px',
           textAlign: 'center',
+          border: '4px solid #00ffff',
+          boxShadow: '0 0 30px rgba(0, 255, 255, 0.5), 0 0 60px rgba(255, 0, 222, 0.3), inset 0 0 30px rgba(0, 255, 255, 0.1)',
+          maxWidth: isMobile ? '320px' : '500px',
+          fontFamily: '"Press Start 2P", monospace',
         }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fbbf24', marginBottom: '16px' }}>🐕 Welcome to Socks' Bone Hunt! 🦴</h2>
-          <p style={{ color: 'white', marginBottom: '8px' }}>Help Socks collect all the bones across 3 levels!</p>
-          <p style={{ color: '#d1d5db', marginBottom: '8px' }}>Use arrow keys to move. Avoid the dog catchers!</p>
-          <p style={{ color: '#d1d5db', marginBottom: '8px' }}>🛋️ Hide on the couch (Place) to stay safe!</p>
-          <p style={{ color: '#d1d5db', marginBottom: '8px' }}>🍗🍕🍪🎾🧀 Catch special treats for 1000 points!</p>
-          <p style={{ color: '#fde047', marginBottom: '8px', fontSize: '14px' }}>⚠️ Each level gets harder with more catchers!</p>
-          <p style={{ color: '#f9a8d4', marginBottom: '16px', fontSize: '14px' }}>💝 Final challenge: Bring Daisy a treat!</p>
-          <p style={{ color: '#9ca3af', marginBottom: '16px', fontSize: '12px' }}>Press ESC or P to pause</p>
+          <h2 style={{ 
+            fontSize: isMobile ? '0.9rem' : '1.2rem', 
+            fontWeight: 'bold', 
+            color: '#ffff00', 
+            marginBottom: '20px',
+            textShadow: '0 0 10px #ffff00, 0 0 20px #ff8800, 0 0 30px #ff8800',
+            letterSpacing: '2px',
+          }}>
+            🐕 SOCKS' BONE HUNT 🦴
+          </h2>
+          <p style={{ color: '#00ffff', marginBottom: '12px', fontSize: isMobile ? '8px' : '10px', lineHeight: '1.8' }}>
+            HELP SOCKS COLLECT ALL THE BONES!
+          </p>
+          <p style={{ color: '#ff00de', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            USE ARROW KEYS TO MOVE
+          </p>
+          <p style={{ color: '#00ff00', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            🛋️ HIDE ON THE COUCH TO STAY SAFE!
+          </p>
+          <p style={{ color: '#ffff00', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            🍗🍕🍪🎾🧀 CATCH SPECIALS = 1000 PTS
+          </p>
+          <p style={{ color: '#ff6600', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            ⚠️ MORE CATCHERS EACH LEVEL!
+          </p>
+          <p style={{ color: '#ff69b4', marginBottom: '20px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            💝 FINAL BOSS: BRING DAISY A TREAT!
+          </p>
+          <div style={{ 
+            color: '#888', 
+            marginBottom: '24px', 
+            fontSize: isMobile ? '6px' : '8px',
+            animation: 'blink 1s infinite',
+          }}>
+            - PRESS START -
+          </div>
           <button
             onClick={initGame}
             style={{
-              padding: '12px 24px',
-              backgroundColor: '#f59e0b',
-              color: 'white',
+              padding: isMobile ? '12px 20px' : '16px 32px',
+              backgroundColor: '#ff00de',
+              color: '#fff',
               fontWeight: 'bold',
-              borderRadius: '8px',
-              border: 'none',
+              fontSize: isMobile ? '10px' : '12px',
+              borderRadius: '4px',
+              border: '3px solid #fff',
               cursor: 'pointer',
+              fontFamily: '"Press Start 2P", monospace',
+              textTransform: 'uppercase',
+              boxShadow: '0 0 20px #ff00de, 0 6px 0 #880088',
+              textShadow: '0 0 10px #fff',
+              letterSpacing: '2px',
             }}
           >
-            Start Game
+            START GAME
           </button>
+          <p style={{ color: '#666', marginTop: '20px', fontSize: isMobile ? '6px' : '7px' }}>
+            © 2024 SOCKS ARCADE
+          </p>
         </div>
       )}
 
@@ -2294,9 +2506,9 @@ export default function SocksGame() {
           width: MAZE_WIDTH * cellSize,
           height: MAZE_HEIGHT * cellSize,
           backgroundColor: getLevelSettings(level).floorColor,
-          border: '4px solid #b45309',
+          border: '4px solid #00ffff',
           borderRadius: '8px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 0 20px rgba(0, 255, 255, 0.4), 0 0 40px rgba(0, 255, 255, 0.2), 0 0 60px rgba(255, 0, 222, 0.1), inset 0 0 30px rgba(0, 0, 0, 0.5)',
           overflow: 'hidden',
           boxSizing: 'content-box',
         }}
@@ -2308,18 +2520,23 @@ export default function SocksGame() {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(14, 165, 233, 0.85)',
-            padding: isMobile ? '6px 16px' : '8px 20px',
-            borderRadius: '20px',
-            fontSize: isMobile ? '14px' : '16px',
+            backgroundColor: 'rgba(0, 0, 40, 0.9)',
+            padding: isMobile ? '8px 16px' : '10px 24px',
+            borderRadius: '4px',
+            fontSize: isMobile ? '10px' : '12px',
             fontWeight: 'bold',
-            color: 'white',
+            color: '#00ffff',
             zIndex: 20,
             animation: 'pulse 0.5s ease-in-out infinite',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            boxShadow: '0 0 20px rgba(0, 255, 255, 0.8), 0 0 40px rgba(0, 255, 255, 0.4)',
             pointerEvents: 'none',
+            border: '2px solid #00ffff',
+            fontFamily: '"Press Start 2P", monospace',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            textShadow: '0 0 10px #00ffff',
           }}>
-            ❄️ Catchers Frozen! ❄️
+            ❄️ FROZEN! ❄️
           </div>
         )}
 
@@ -2443,15 +2660,19 @@ export default function SocksGame() {
       {/* Footer instructions - only show when game is active */}
       {gameState !== 'start' && (
       <p style={{ 
-        color: '#9ca3af', 
+        color: '#00ffff', 
         marginTop: '16px', 
-        fontSize: isMobile ? '12px' : '14px',
+        fontSize: isMobile ? '7px' : '9px',
         textAlign: 'center',
-        padding: '0 16px',
+        padding: '8px 16px',
+        fontFamily: '"Press Start 2P", monospace',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        textShadow: '0 0 10px rgba(0, 255, 255, 0.5)',
       }}>
         {isMobile 
-          ? 'Use the D-pad to move Socks • Hide on the couch to stay safe!'
-          : 'Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause'
+          ? 'D-PAD TO MOVE • COUCH = SAFE ZONE'
+          : '← ↑ → ↓ MOVE • COUCH = SAFE ZONE • ESC/P = PAUSE'
         }
       </p>
       )}
