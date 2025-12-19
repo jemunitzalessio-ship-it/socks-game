@@ -1610,6 +1610,8 @@ export default function SocksGame() {
           100% { transform: scale(0) rotate(360deg); opacity: 0; }
         }
       `}</style>
+      {/* Title - hide on start screen since dialog has its own */}
+      {gameState !== 'start' && (
       <h1 style={{
         fontSize: isMobile ? '1.25rem' : '1.875rem',
         fontWeight: 'bold',
@@ -1722,7 +1724,10 @@ export default function SocksGame() {
           </div>
         )}
       </h1>
+      )}
       
+      {/* Stats bar - only show when game has started */}
+      {gameState !== 'start' && (
       <div style={{
         display: 'flex',
         gap: isMobile ? '12px' : '24px',
@@ -1767,11 +1772,6 @@ export default function SocksGame() {
             <span>🦴 Got treat!</span>
           </div>
         )}
-        {catchersFrozen && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#0ea5e9', padding: '0 8px', borderRadius: '4px', fontSize: isMobile ? '12px' : '14px', animation: 'pulse 0.5s ease-in-out infinite' }}>
-            <span>❄️ Frozen!</span>
-          </div>
-        )}
         
         {/* Pause and Reset buttons - only show during gameplay on desktop */}
         {!isMobile && (gameState === 'playing' || gameState === 'paused') && (
@@ -1809,6 +1809,7 @@ export default function SocksGame() {
           </div>
         )}
       </div>
+      )}
 
       {/* Paused overlay - only show if not showing treat message */}
       {gameState === 'paused' && !showTreatMessage && (
@@ -2285,14 +2286,43 @@ export default function SocksGame() {
         </div>
       )}
 
+      {/* Only render maze when game has started */}
+      {gameState !== 'start' && (
       <div
-        className="relative rounded-lg shadow-2xl border-4 border-amber-700"
         style={{
+          position: 'relative',
           width: MAZE_WIDTH * cellSize,
           height: MAZE_HEIGHT * cellSize,
           backgroundColor: getLevelSettings(level).floorColor,
+          border: '4px solid #b45309',
+          borderRadius: '8px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          overflow: 'hidden',
+          boxSizing: 'content-box',
         }}
       >
+        {/* Frozen indicator overlay */}
+        {catchersFrozen && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            backgroundColor: 'rgba(14, 165, 233, 0.85)',
+            padding: isMobile ? '6px 16px' : '8px 20px',
+            borderRadius: '20px',
+            fontSize: isMobile ? '14px' : '16px',
+            fontWeight: 'bold',
+            color: 'white',
+            zIndex: 20,
+            animation: 'pulse 0.5s ease-in-out infinite',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+            pointerEvents: 'none',
+          }}>
+            ❄️ Catchers Frozen! ❄️
+          </div>
+        )}
+
         {/* Render maze walls */}
         {maze.map((row, y) =>
           row.map((cell, x) =>
@@ -2400,15 +2430,18 @@ export default function SocksGame() {
           </div>
         )}
       </div>
+      )}
 
-      {/* D-Pad for mobile controls */}
-      {isMobile && (
+      {/* D-Pad for mobile controls - only show when game is active */}
+      {isMobile && gameState !== 'start' && (
         <DPad 
           onDirectionStart={handleTouchStart}
           onDirectionEnd={handleTouchEnd}
         />
       )}
 
+      {/* Footer instructions - only show when game is active */}
+      {gameState !== 'start' && (
       <p style={{ 
         color: '#9ca3af', 
         marginTop: '16px', 
@@ -2421,6 +2454,7 @@ export default function SocksGame() {
           : 'Use arrow keys to move Socks • Hide on the couch to stay safe! • Press ESC or P to pause'
         }
       </p>
+      )}
     </div>
   );
 }
