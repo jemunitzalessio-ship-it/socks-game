@@ -642,13 +642,13 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
   const touchStartTime = useRef(0);
   const touchStartPos = useRef({ x: 0, y: 0 });
   const hasMovedSignificantly = useRef(false);
-  const tapTimeoutRef = useRef(null);
+  const movementStarted = useRef(false);
   
   const baseSize = 140;
   const knobSize = 56;
-  const deadZone = 15; // Minimum distance to register a direction
-  const tapThreshold = 200; // ms - taps shorter than this trigger single move
-  const moveThreshold = 10; // pixels - movement less than this counts as a tap
+  const deadZone = 12; // Reduced for more responsiveness
+  const tapThreshold = 150; // ms - taps shorter than this trigger single move
+  const moveThreshold = 8; // pixels - movement less than this counts as a tap
 
   const getDirectionFromPosition = (x, y) => {
     const distance = Math.sqrt(x * x + y * y);
@@ -668,20 +668,7 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     }
   };
 
-  const getDirectionFromTouch = (clientX, clientY) => {
-    if (!baseRef.current) return null;
-    
-    const rect = baseRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const deltaX = clientX - centerX;
-    const deltaY = clientY - centerY;
-    
-    return getDirectionFromPosition(deltaX, deltaY);
-  };
-
-  const handleMove = (clientX, clientY, isStart = false) => {
+  const handleMove = (clientX, clientY) => {
     if (!baseRef.current) return;
     
     const rect = baseRef.current.getBoundingClientRect();
@@ -692,14 +679,12 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     let deltaY = clientY - centerY;
     
     // Check if we've moved significantly from start position
-    if (!isStart) {
-      const moveDistance = Math.sqrt(
-        Math.pow(clientX - touchStartPos.current.x, 2) + 
-        Math.pow(clientY - touchStartPos.current.y, 2)
-      );
-      if (moveDistance > moveThreshold) {
-        hasMovedSignificantly.current = true;
-      }
+    const moveDistance = Math.sqrt(
+      Math.pow(clientX - touchStartPos.current.x, 2) + 
+      Math.pow(clientY - touchStartPos.current.y, 2)
+    );
+    if (moveDistance > moveThreshold) {
+      hasMovedSignificantly.current = true;
     }
     
     // Clamp to base radius
@@ -717,16 +702,15 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     if (newDirection) {
       if (currentDirection !== newDirection.dir) {
         setCurrentDirection(newDirection.dir);
-        // Only start continuous movement if we've been holding or dragging
-        const elapsed = Date.now() - touchStartTime.current;
-        if (elapsed > tapThreshold || hasMovedSignificantly.current) {
-          onDirectionStart({ dx: newDirection.dx, dy: newDirection.dy });
-        }
+        // Start movement immediately!
+        onDirectionStart({ dx: newDirection.dx, dy: newDirection.dy });
+        movementStarted.current = true;
       }
     } else {
       if (currentDirection !== null) {
         setCurrentDirection(null);
         onDirectionEnd();
+        movementStarted.current = false;
       }
     }
   };
@@ -734,19 +718,14 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
   const handleTouchStart = (e) => {
     e.preventDefault();
     
-    // Clear any pending tap timeout
-    if (tapTimeoutRef.current) {
-      clearTimeout(tapTimeoutRef.current);
-      tapTimeoutRef.current = null;
-    }
-    
     const touch = e.touches[0];
     touchStartTime.current = Date.now();
     touchStartPos.current = { x: touch.clientX, y: touch.clientY };
     hasMovedSignificantly.current = false;
+    movementStarted.current = false;
     
     setIsActive(true);
-    handleMove(touch.clientX, touch.clientY, true);
+    handleMove(touch.clientX, touch.clientY);
   };
 
   const handleTouchMove = (e) => {
@@ -762,42 +741,37 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     const elapsed = Date.now() - touchStartTime.current;
     const wasTap = elapsed < tapThreshold && !hasMovedSignificantly.current;
     
-    if (wasTap && currentDirection) {
-      // It was a tap! Send a brief direction pulse for single-square movement
-      const direction = getDirectionFromTouch(touchStartPos.current.x, touchStartPos.current.y);
-      if (direction) {
-        onDirectionStart({ dx: direction.dx, dy: direction.dy });
-        // Stop after a brief moment (enough for one move to register)
-        tapTimeoutRef.current = setTimeout(() => {
-          onDirectionEnd();
-          tapTimeoutRef.current = null;
-        }, 80);
-      }
+    // If it was a tap and movement already started, we just let the single move happen
+    // by stopping immediately. If it wasn't a tap, also stop.
+    // The key difference: for taps, we DON'T call onDirectionEnd immediately if 
+    // movement just started, giving time for one move to register
+    
+    if (wasTap && movementStarted.current) {
+      // Brief delay to ensure the single move registers
+      setTimeout(() => {
+        onDirectionEnd();
+      }, 50);
     } else {
-      // Normal release - stop movement
       onDirectionEnd();
     }
     
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
     setCurrentDirection(null);
+    movementStarted.current = false;
   };
 
   // Mouse support for testing on desktop
   const handleMouseDown = (e) => {
     e.preventDefault();
     
-    if (tapTimeoutRef.current) {
-      clearTimeout(tapTimeoutRef.current);
-      tapTimeoutRef.current = null;
-    }
-    
     touchStartTime.current = Date.now();
     touchStartPos.current = { x: e.clientX, y: e.clientY };
     hasMovedSignificantly.current = false;
+    movementStarted.current = false;
     
     setIsActive(true);
-    handleMove(e.clientX, e.clientY, true);
+    handleMove(e.clientX, e.clientY);
   };
 
   const handleMouseMove = (e) => {
@@ -809,15 +783,10 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     const elapsed = Date.now() - touchStartTime.current;
     const wasTap = elapsed < tapThreshold && !hasMovedSignificantly.current;
     
-    if (wasTap && currentDirection) {
-      const direction = getDirectionFromTouch(touchStartPos.current.x, touchStartPos.current.y);
-      if (direction) {
-        onDirectionStart({ dx: direction.dx, dy: direction.dy });
-        tapTimeoutRef.current = setTimeout(() => {
-          onDirectionEnd();
-          tapTimeoutRef.current = null;
-        }, 80);
-      }
+    if (wasTap && movementStarted.current) {
+      setTimeout(() => {
+        onDirectionEnd();
+      }, 50);
     } else {
       onDirectionEnd();
     }
@@ -825,6 +794,7 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
     setCurrentDirection(null);
+    movementStarted.current = false;
   };
 
   useEffect(() => {
@@ -837,15 +807,6 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
       };
     }
   }, [isActive, currentDirection]);
-  
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (tapTimeoutRef.current) {
-        clearTimeout(tapTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Direction indicator arrows
   const directionArrows = [
