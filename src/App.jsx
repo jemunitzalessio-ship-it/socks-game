@@ -144,10 +144,11 @@ const Dog = ({ x, y, direction, inSafeZone, cellSize = DEFAULT_CELL_SIZE }) => (
       <ellipse cx="10" cy="6" rx="3" ry="4" fill="#6B3510" />
       {/* Tail */}
       <path d="M6 16 Q2 12 4 8" stroke="#8B4513" strokeWidth="3" fill="none" strokeLinecap="round" />
-      {/* White feet */}
-      <ellipse cx="10" cy="25" rx="3" ry="2" fill="white" />
+      {/* Back feet (brown) */}
+      <ellipse cx="10" cy="25" rx="3" ry="2" fill="#8B4513" />
+      <ellipse cx="8" cy="20" rx="2" ry="1.5" fill="#8B4513" />
+      {/* Front feet (white socks) */}
       <ellipse cx="22" cy="25" rx="3" ry="2" fill="white" />
-      <ellipse cx="8" cy="20" rx="2" ry="1.5" fill="white" />
       <ellipse cx="24" cy="20" rx="2" ry="1.5" fill="white" />
     </svg>
   </div>
@@ -632,117 +633,211 @@ const Firework = ({ x, y, color }) => {
 };
 
 // D-Pad component for mobile touch controls
-const DPad = ({ onDirectionStart, onDirectionEnd }) => {
-  const buttonStyle = {
-    width: '60px',
-    height: '60px',
-    backgroundColor: 'rgba(0, 0, 40, 0.9)',
-    border: '3px solid #00ffff',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
-    color: '#00ffff',
-    cursor: 'pointer',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-    touchAction: 'manipulation',
-    boxShadow: '0 0 10px rgba(0, 255, 255, 0.3), 0 4px 0 #006666',
-    textShadow: '0 0 10px #00ffff',
+const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
+  const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
+  const [isActive, setIsActive] = useState(false);
+  const [currentDirection, setCurrentDirection] = useState(null);
+  const baseRef = useRef(null);
+  const baseSize = 140;
+  const knobSize = 56;
+  const deadZone = 15; // Minimum distance to register a direction
+
+  const getDirectionFromPosition = (x, y) => {
+    const distance = Math.sqrt(x * x + y * y);
+    if (distance < deadZone) return null;
+
+    const angle = Math.atan2(y, x) * (180 / Math.PI);
+    
+    // Convert angle to 4 cardinal directions
+    // Right: -45 to 45, Down: 45 to 135, Left: 135 to 180 or -180 to -135, Up: -135 to -45
+    if (angle >= -45 && angle < 45) {
+      return { dir: 'right', dx: 1, dy: 0 };
+    } else if (angle >= 45 && angle < 135) {
+      return { dir: 'down', dx: 0, dy: 1 };
+    } else if (angle >= 135 || angle < -135) {
+      return { dir: 'left', dx: -1, dy: 0 };
+    } else {
+      return { dir: 'up', dx: 0, dy: -1 };
+    }
   };
 
-  const activeStyle = {
-    ...buttonStyle,
-    backgroundColor: 'rgba(0, 255, 255, 0.3)',
-    boxShadow: '0 0 20px rgba(0, 255, 255, 0.8), 0 2px 0 #006666',
-    transform: 'translateY(2px)',
+  const handleMove = (clientX, clientY) => {
+    if (!baseRef.current) return;
+    
+    const rect = baseRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    let deltaX = clientX - centerX;
+    let deltaY = clientY - centerY;
+    
+    // Clamp to base radius
+    const maxRadius = (baseSize - knobSize) / 2;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (distance > maxRadius) {
+      deltaX = (deltaX / distance) * maxRadius;
+      deltaY = (deltaY / distance) * maxRadius;
+    }
+    
+    setKnobPosition({ x: deltaX, y: deltaY });
+    
+    const newDirection = getDirectionFromPosition(deltaX, deltaY);
+    
+    if (newDirection) {
+      if (currentDirection !== newDirection.dir) {
+        setCurrentDirection(newDirection.dir);
+        onDirectionStart({ dx: newDirection.dx, dy: newDirection.dy });
+      }
+    } else {
+      if (currentDirection !== null) {
+        setCurrentDirection(null);
+        onDirectionEnd();
+      }
+    }
   };
 
-  const [activeDir, setActiveDir] = useState(null);
-
-  const handleStart = (dir, dirObj) => (e) => {
+  const handleTouchStart = (e) => {
     e.preventDefault();
-    setActiveDir(dir);
-    onDirectionStart(dirObj);
+    setIsActive(true);
+    const touch = e.touches[0];
+    handleMove(touch.clientX, touch.clientY);
   };
 
-  const handleEnd = (e) => {
+  const handleTouchMove = (e) => {
     e.preventDefault();
-    setActiveDir(null);
+    if (!isActive) return;
+    const touch = e.touches[0];
+    handleMove(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    setIsActive(false);
+    setKnobPosition({ x: 0, y: 0 });
+    setCurrentDirection(null);
     onDirectionEnd();
   };
 
+  // Mouse support for testing on desktop
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsActive(true);
+    handleMove(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isActive) return;
+    handleMove(e.clientX, e.clientY);
+  };
+
+  const handleMouseUp = () => {
+    setIsActive(false);
+    setKnobPosition({ x: 0, y: 0 });
+    setCurrentDirection(null);
+    onDirectionEnd();
+  };
+
+  useEffect(() => {
+    if (isActive) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isActive]);
+
+  // Direction indicator arrows
+  const directionArrows = [
+    { dir: 'up', symbol: '▲', angle: -90, x: 0, y: -52 },
+    { dir: 'down', symbol: '▼', angle: 90, x: 0, y: 52 },
+    { dir: 'left', symbol: '◀', angle: 180, x: -52, y: 0 },
+    { dir: 'right', symbol: '▶', angle: 0, x: 52, y: 0 },
+  ];
+
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '60px 60px 60px',
-      gridTemplateRows: '60px 60px 60px',
-      gap: '4px',
-      marginTop: '16px',
-    }}>
-      {/* Empty top-left */}
-      <div />
-      {/* Up button */}
-      <button
-        style={activeDir === 'up' ? activeStyle : buttonStyle}
-        onTouchStart={handleStart('up', { dx: 0, dy: -1 })}
-        onTouchEnd={handleEnd}
-        onMouseDown={handleStart('up', { dx: 0, dy: -1 })}
-        onMouseUp={handleEnd}
-        onMouseLeave={handleEnd}
+    <div style={{ marginTop: '16px', position: 'relative' }}>
+      {/* Joystick base */}
+      <div
+        ref={baseRef}
+        style={{
+          width: baseSize,
+          height: baseSize,
+          borderRadius: '50%',
+          backgroundColor: 'rgba(0, 0, 40, 0.9)',
+          border: '4px solid #00ffff',
+          boxShadow: '0 0 20px rgba(0, 255, 255, 0.4), inset 0 0 30px rgba(0, 255, 255, 0.1)',
+          position: 'relative',
+          touchAction: 'none',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
       >
-        ▲
-      </button>
-      {/* Empty top-right */}
-      <div />
-      {/* Left button */}
-      <button
-        style={activeDir === 'left' ? activeStyle : buttonStyle}
-        onTouchStart={handleStart('left', { dx: -1, dy: 0 })}
-        onTouchEnd={handleEnd}
-        onMouseDown={handleStart('left', { dx: -1, dy: 0 })}
-        onMouseUp={handleEnd}
-        onMouseLeave={handleEnd}
-      >
-        ◀
-      </button>
-      {/* Center - empty or could be a "stop" button */}
-      <div style={{
-        ...buttonStyle,
-        backgroundColor: 'rgba(255, 0, 222, 0.3)',
-        border: '3px solid #ff00de',
-        fontSize: '16px',
-        boxShadow: '0 0 10px rgba(255, 0, 222, 0.5)',
-      }}>
-        🐕
+        {/* Direction indicators */}
+        {directionArrows.map(({ dir, symbol, x, y }) => (
+          <div
+            key={dir}
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+              fontSize: '16px',
+              color: currentDirection === dir ? '#ffff00' : 'rgba(0, 255, 255, 0.4)',
+              textShadow: currentDirection === dir ? '0 0 10px #ffff00' : 'none',
+              transition: 'color 0.1s, text-shadow 0.1s',
+              pointerEvents: 'none',
+            }}
+          >
+            {symbol}
+          </div>
+        ))}
+        
+        {/* Joystick knob */}
+        <div
+          style={{
+            width: knobSize,
+            height: knobSize,
+            borderRadius: '50%',
+            backgroundColor: isActive ? 'rgba(255, 0, 222, 0.8)' : 'rgba(255, 0, 222, 0.6)',
+            border: '3px solid #ff00de',
+            boxShadow: isActive 
+              ? '0 0 25px rgba(255, 0, 222, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.3)' 
+              : '0 0 15px rgba(255, 0, 222, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.2)',
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${knobPosition.x}px), calc(-50% + ${knobPosition.y}px))`,
+            transition: isActive ? 'none' : 'transform 0.15s ease-out',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '20px',
+            pointerEvents: 'none',
+          }}
+        >
+          🐕
+        </div>
       </div>
-      {/* Right button */}
-      <button
-        style={activeDir === 'right' ? activeStyle : buttonStyle}
-        onTouchStart={handleStart('right', { dx: 1, dy: 0 })}
-        onTouchEnd={handleEnd}
-        onMouseDown={handleStart('right', { dx: 1, dy: 0 })}
-        onMouseUp={handleEnd}
-        onMouseLeave={handleEnd}
-      >
-        ▶
-      </button>
-      {/* Empty bottom-left */}
-      <div />
-      {/* Down button */}
-      <button
-        style={activeDir === 'down' ? activeStyle : buttonStyle}
-        onTouchStart={handleStart('down', { dx: 0, dy: 1 })}
-        onTouchEnd={handleEnd}
-        onMouseDown={handleStart('down', { dx: 0, dy: 1 })}
-        onMouseUp={handleEnd}
-        onMouseLeave={handleEnd}
-      >
-        ▼
-      </button>
-      {/* Empty bottom-right */}
-      <div />
+      
+      {/* Label */}
+      <div style={{
+        textAlign: 'center',
+        marginTop: '8px',
+        fontSize: '8px',
+        color: '#00ffff',
+        fontFamily: '"Press Start 2P", monospace',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
+        textShadow: '0 0 5px rgba(0, 255, 255, 0.5)',
+      }}>
+        DRAG TO MOVE
+      </div>
     </div>
   );
 };
@@ -2194,12 +2289,12 @@ export default function SocksGame() {
               <rect x="0" y="16" width="4" height="4" fill="#8B4513" />
               <rect x="26" y="18" width="4" height="2" fill="#8B4513" />
               <rect x="28" y="16" width="4" height="4" fill="#8B4513" />
+              {/* Front paws - white */}
               <rect x="0" y="14" width="4" height="4" fill="white" />
               <rect x="28" y="14" width="4" height="4" fill="white" />
-              <rect x="10" y="32" width="4" height="6" fill="#8B4513" />
-              <rect x="18" y="32" width="4" height="6" fill="#8B4513" />
-              <rect x="10" y="36" width="4" height="4" fill="white" />
-              <rect x="18" y="36" width="4" height="4" fill="white" />
+              {/* Back legs and feet - brown */}
+              <rect x="10" y="32" width="4" height="8" fill="#8B4513" />
+              <rect x="18" y="32" width="4" height="8" fill="#8B4513" />
             </svg>
           </div>
           
@@ -2287,12 +2382,12 @@ export default function SocksGame() {
               <rect x="0" y="16" width="4" height="4" fill="#8B4513" />
               <rect x="26" y="18" width="4" height="2" fill="#8B4513" />
               <rect x="28" y="16" width="4" height="4" fill="#8B4513" />
+              {/* Front paws - white */}
               <rect x="0" y="14" width="4" height="4" fill="white" />
               <rect x="28" y="14" width="4" height="4" fill="white" />
-              <rect x="10" y="32" width="4" height="6" fill="#8B4513" />
-              <rect x="18" y="32" width="4" height="6" fill="#8B4513" />
-              <rect x="10" y="36" width="4" height="4" fill="white" />
-              <rect x="18" y="36" width="4" height="4" fill="white" />
+              {/* Back legs and feet - brown */}
+              <rect x="10" y="32" width="4" height="8" fill="#8B4513" />
+              <rect x="18" y="32" width="4" height="8" fill="#8B4513" />
             </svg>
             
             {/* Dancing Daisy (white dog) */}
@@ -2649,9 +2744,9 @@ export default function SocksGame() {
       </div>
       )}
 
-      {/* D-Pad for mobile controls - only show when game is active */}
+      {/* Virtual Joystick for mobile controls - only show when game is active */}
       {isMobile && gameState !== 'start' && (
-        <DPad 
+        <VirtualJoystick 
           onDirectionStart={handleTouchStart}
           onDirectionEnd={handleTouchEnd}
         />
@@ -2671,7 +2766,7 @@ export default function SocksGame() {
         textShadow: '0 0 10px rgba(0, 255, 255, 0.5)',
       }}>
         {isMobile 
-          ? 'D-PAD TO MOVE • COUCH = SAFE ZONE'
+          ? 'JOYSTICK TO MOVE • COUCH = SAFE ZONE'
           : '← ↑ → ↓ MOVE • COUCH = SAFE ZONE • ESC/P = PAUSE'
         }
       </p>
