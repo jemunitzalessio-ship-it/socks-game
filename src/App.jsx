@@ -633,55 +633,26 @@ const Firework = ({ x, y, color }) => {
 };
 
 // Virtual Joystick component for mobile touch controls
-// Supports both tap (single square) and hold/drag (continuous movement)
+// Tap = single square, Hold = continuous movement
 const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
   const [knobPosition, setKnobPosition] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(false);
-  const [currentDirection, setCurrentDirection] = useState(null);
   const [visualDirection, setVisualDirection] = useState(null);
   const baseRef = useRef(null);
   const touchStartTime = useRef(0);
-  const continuousMovementStarted = useRef(false);
-  const continuousDelayTimer = useRef(null);
-  const lastDirection = useRef(null);
+  const continuousStarted = useRef(false);
+  const continuousTimer = useRef(null);
+  const currentDir = useRef(null);
   
   const baseSize = 140;
   const knobSize = 56;
-  const deadZone = 12;
-  const continuousDelay = 80; // ms before continuous movement starts
-  const directionLockThreshold = 0.7; // How much stronger one axis must be to change direction
+  const deadZone = 10;
+  const holdThreshold = 100; // ms - hold longer than this = continuous movement
 
-  const getDirectionFromPosition = (x, y) => {
+  const getDirection = (x, y) => {
     const distance = Math.sqrt(x * x + y * y);
     if (distance < deadZone) return null;
 
-    // Use stronger axis determination with some stickiness
-    const absX = Math.abs(x);
-    const absY = Math.abs(y);
-    
-    // If we have a current direction, require more force to change to perpendicular
-    if (lastDirection.current) {
-      const isHorizontal = lastDirection.current.dx !== 0;
-      if (isHorizontal) {
-        // Currently moving horizontally, need stronger vertical to switch
-        if (absY > absX * 1.3) {
-          // Switch to vertical
-        } else if (absX > deadZone * 0.5) {
-          // Stay horizontal
-          return { dir: x > 0 ? 'right' : 'left', dx: x > 0 ? 1 : -1, dy: 0 };
-        }
-      } else {
-        // Currently moving vertically, need stronger horizontal to switch
-        if (absX > absY * 1.3) {
-          // Switch to horizontal
-        } else if (absY > deadZone * 0.5) {
-          // Stay vertical
-          return { dir: y > 0 ? 'down' : 'up', dx: 0, dy: y > 0 ? 1 : -1 };
-        }
-      }
-    }
-
-    // Standard 4-direction detection
     const angle = Math.atan2(y, x) * (180 / Math.PI);
     
     if (angle >= -45 && angle < 45) {
@@ -695,7 +666,7 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     }
   };
 
-  const handleMove = (clientX, clientY) => {
+  const updatePosition = (clientX, clientY) => {
     if (!baseRef.current) return;
     
     const rect = baseRef.current.getBoundingClientRect();
@@ -715,157 +686,134 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     
     setKnobPosition({ x: deltaX, y: deltaY });
     
-    const newDirection = getDirectionFromPosition(deltaX, deltaY);
+    const newDir = getDirection(deltaX, deltaY);
+    setVisualDirection(newDir?.dir || null);
     
-    // Update visual direction immediately for feedback
-    setVisualDirection(newDirection?.dir || null);
+    const prevDir = currentDir.current?.dir;
+    const newDirName = newDir?.dir;
     
-    if (newDirection) {
-      if (currentDirection !== newDirection.dir) {
-        setCurrentDirection(newDirection.dir);
-        lastDirection.current = newDirection;
-        
-        // If continuous movement already started, update direction immediately
-        if (continuousMovementStarted.current) {
-          onDirectionStart({ dx: newDirection.dx, dy: newDirection.dy });
-        } else {
-          // Clear any pending continuous start and set new one
-          if (continuousDelayTimer.current) {
-            clearTimeout(continuousDelayTimer.current);
-          }
-          // Start continuous movement after short delay
-          continuousDelayTimer.current = setTimeout(() => {
-            if (isActive) {
-              continuousMovementStarted.current = true;
-              const dir = lastDirection.current;
-              if (dir) {
-                onDirectionStart({ dx: dir.dx, dy: dir.dy });
-              }
-            }
-          }, continuousDelay);
-        }
+    if (newDir) {
+      // Always update current direction
+      currentDir.current = newDir;
+      
+      // If in continuous mode and direction changed, fire immediately
+      if (continuousStarted.current && prevDir !== newDirName) {
+        onDirectionStart({ dx: newDir.dx, dy: newDir.dy });
       }
     } else {
-      if (currentDirection !== null) {
-        setCurrentDirection(null);
-        lastDirection.current = null;
-        if (continuousMovementStarted.current) {
+      // Moved to dead zone - stop if we were moving
+      if (currentDir.current) {
+        currentDir.current = null;
+        if (continuousStarted.current) {
           onDirectionEnd();
+          continuousStarted.current = false;
         }
-        if (continuousDelayTimer.current) {
-          clearTimeout(continuousDelayTimer.current);
-          continuousDelayTimer.current = null;
-        }
-        continuousMovementStarted.current = false;
       }
+    }
+  };
+
+  const startContinuous = () => {
+    if (currentDir.current && !continuousStarted.current) {
+      continuousStarted.current = true;
+      onDirectionStart({ dx: currentDir.current.dx, dy: currentDir.current.dy });
     }
   };
 
   const handleTouchStart = (e) => {
     e.preventDefault();
     
-    // Clear any pending timers
-    if (continuousDelayTimer.current) {
-      clearTimeout(continuousDelayTimer.current);
-      continuousDelayTimer.current = null;
+    if (continuousTimer.current) {
+      clearTimeout(continuousTimer.current);
     }
     
-    const touch = e.touches[0];
     touchStartTime.current = Date.now();
-    continuousMovementStarted.current = false;
-    lastDirection.current = null;
+    continuousStarted.current = false;
+    currentDir.current = null;
     
     setIsActive(true);
-    handleMove(touch.clientX, touch.clientY);
+    
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY);
+    
+    // Start continuous movement after hold threshold
+    continuousTimer.current = setTimeout(startContinuous, holdThreshold);
   };
 
   const handleTouchMove = (e) => {
     e.preventDefault();
     if (!isActive) return;
     const touch = e.touches[0];
-    handleMove(touch.clientX, touch.clientY);
+    updatePosition(touch.clientX, touch.clientY);
   };
 
   const handleTouchEnd = (e) => {
     e.preventDefault();
     
-    const elapsed = Date.now() - touchStartTime.current;
-    const wasTap = elapsed < continuousDelay && !continuousMovementStarted.current;
-    
-    // Clear pending continuous timer
-    if (continuousDelayTimer.current) {
-      clearTimeout(continuousDelayTimer.current);
-      continuousDelayTimer.current = null;
+    if (continuousTimer.current) {
+      clearTimeout(continuousTimer.current);
+      continuousTimer.current = null;
     }
     
-    if (wasTap && lastDirection.current) {
-      // Quick tap - trigger single move
-      const dir = lastDirection.current;
-      onDirectionStart({ dx: dir.dx, dy: dir.dy });
-      // Stop after brief moment for single move
-      setTimeout(() => {
-        onDirectionEnd();
-      }, 60);
+    const elapsed = Date.now() - touchStartTime.current;
+    
+    if (!continuousStarted.current && currentDir.current && elapsed < holdThreshold) {
+      // Quick tap - single move
+      onDirectionStart({ dx: currentDir.current.dx, dy: currentDir.current.dy });
+      setTimeout(onDirectionEnd, 70);
     } else {
-      // Normal release
       onDirectionEnd();
     }
     
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
-    setCurrentDirection(null);
     setVisualDirection(null);
-    continuousMovementStarted.current = false;
-    lastDirection.current = null;
+    continuousStarted.current = false;
+    currentDir.current = null;
   };
 
-  // Mouse support for testing on desktop
+  // Mouse support
   const handleMouseDown = (e) => {
     e.preventDefault();
     
-    if (continuousDelayTimer.current) {
-      clearTimeout(continuousDelayTimer.current);
-      continuousDelayTimer.current = null;
+    if (continuousTimer.current) {
+      clearTimeout(continuousTimer.current);
     }
     
     touchStartTime.current = Date.now();
-    continuousMovementStarted.current = false;
-    lastDirection.current = null;
+    continuousStarted.current = false;
+    currentDir.current = null;
     
     setIsActive(true);
-    handleMove(e.clientX, e.clientY);
+    updatePosition(e.clientX, e.clientY);
+    
+    continuousTimer.current = setTimeout(startContinuous, holdThreshold);
   };
 
   const handleMouseMove = (e) => {
     if (!isActive) return;
-    handleMove(e.clientX, e.clientY);
+    updatePosition(e.clientX, e.clientY);
   };
 
   const handleMouseUp = () => {
-    const elapsed = Date.now() - touchStartTime.current;
-    const wasTap = elapsed < continuousDelay && !continuousMovementStarted.current;
-    
-    if (continuousDelayTimer.current) {
-      clearTimeout(continuousDelayTimer.current);
-      continuousDelayTimer.current = null;
+    if (continuousTimer.current) {
+      clearTimeout(continuousTimer.current);
+      continuousTimer.current = null;
     }
     
-    if (wasTap && lastDirection.current) {
-      const dir = lastDirection.current;
-      onDirectionStart({ dx: dir.dx, dy: dir.dy });
-      setTimeout(() => {
-        onDirectionEnd();
-      }, 60);
+    const elapsed = Date.now() - touchStartTime.current;
+    
+    if (!continuousStarted.current && currentDir.current && elapsed < holdThreshold) {
+      onDirectionStart({ dx: currentDir.current.dx, dy: currentDir.current.dy });
+      setTimeout(onDirectionEnd, 70);
     } else {
       onDirectionEnd();
     }
     
     setIsActive(false);
     setKnobPosition({ x: 0, y: 0 });
-    setCurrentDirection(null);
     setVisualDirection(null);
-    continuousMovementStarted.current = false;
-    lastDirection.current = null;
+    continuousStarted.current = false;
+    currentDir.current = null;
   };
 
   useEffect(() => {
@@ -879,11 +827,10 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
     }
   }, [isActive]);
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (continuousDelayTimer.current) {
-        clearTimeout(continuousDelayTimer.current);
+      if (continuousTimer.current) {
+        clearTimeout(continuousTimer.current);
       }
     };
   }, []);
