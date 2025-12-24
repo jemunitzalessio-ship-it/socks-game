@@ -931,6 +931,199 @@ const VirtualJoystick = ({ onDirectionStart, onDirectionEnd }) => {
   );
 };
 
+// High Score Entry Component - arcade style 3-letter initials
+const HighScoreEntry = ({ score, onSubmit, isMobile }) => {
+  const [initials, setInitials] = useState(['A', 'A', 'A']);
+  const [activeIndex, setActiveIndex] = useState(0);
+  
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  
+  const cycleUp = (index) => {
+    setInitials(prev => {
+      const newInitials = [...prev];
+      const currentIdx = letters.indexOf(newInitials[index]);
+      newInitials[index] = letters[(currentIdx + 1) % 26];
+      return newInitials;
+    });
+  };
+  
+  const cycleDown = (index) => {
+    setInitials(prev => {
+      const newInitials = [...prev];
+      const currentIdx = letters.indexOf(newInitials[index]);
+      newInitials[index] = letters[(currentIdx - 1 + 26) % 26];
+      return newInitials;
+    });
+  };
+  
+  const handleSubmit = () => {
+    onSubmit(initials.join(''));
+  };
+  
+  // Keyboard support
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowUp') {
+        cycleUp(activeIndex);
+      } else if (e.key === 'ArrowDown') {
+        cycleDown(activeIndex);
+      } else if (e.key === 'ArrowLeft') {
+        setActiveIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        setActiveIndex(prev => Math.min(2, prev + 1));
+      } else if (e.key === 'Enter') {
+        handleSubmit();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [activeIndex]);
+  
+  return (
+    <div style={{
+      backgroundColor: 'rgba(0, 0, 20, 0.95)',
+      borderRadius: '8px',
+      padding: isMobile ? '24px' : '40px',
+      textAlign: 'center',
+      border: '4px solid #ffff00',
+      boxShadow: '0 0 30px rgba(255, 255, 0, 0.5), 0 0 60px rgba(255, 0, 222, 0.3)',
+      fontFamily: '"Press Start 2P", monospace',
+      maxWidth: isMobile ? '320px' : '450px',
+    }}>
+      <h2 style={{
+        fontSize: isMobile ? '0.8rem' : '1rem',
+        color: '#ffff00',
+        marginBottom: '16px',
+        textShadow: '0 0 10px #ffff00',
+        letterSpacing: '2px',
+      }}>
+        🏆 NEW HIGH SCORE! 🏆
+      </h2>
+      
+      <div style={{
+        fontSize: isMobile ? '1.5rem' : '2rem',
+        color: '#00ffff',
+        marginBottom: '24px',
+        textShadow: '0 0 15px #00ffff',
+      }}>
+        {score.toLocaleString()}
+      </div>
+      
+      <p style={{
+        color: '#ff00de',
+        fontSize: isMobile ? '8px' : '10px',
+        marginBottom: '20px',
+      }}>
+        ENTER YOUR INITIALS
+      </p>
+      
+      {/* Initials selector */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: isMobile ? '12px' : '20px',
+        marginBottom: '24px',
+      }}>
+        {initials.map((letter, idx) => (
+          <div 
+            key={idx}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <button
+              onClick={() => cycleUp(idx)}
+              style={{
+                width: isMobile ? '40px' : '50px',
+                height: isMobile ? '30px' : '36px',
+                backgroundColor: activeIndex === idx ? '#ff00de' : '#333',
+                border: '2px solid #00ffff',
+                borderRadius: '4px',
+                color: '#00ffff',
+                fontSize: isMobile ? '16px' : '20px',
+                cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+              }}
+              onFocus={() => setActiveIndex(idx)}
+            >
+              ▲
+            </button>
+            
+            <div style={{
+              width: isMobile ? '50px' : '60px',
+              height: isMobile ? '50px' : '60px',
+              backgroundColor: activeIndex === idx ? 'rgba(255, 255, 0, 0.2)' : 'rgba(0, 0, 0, 0.5)',
+              border: activeIndex === idx ? '3px solid #ffff00' : '3px solid #00ffff',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: isMobile ? '1.5rem' : '2rem',
+              color: activeIndex === idx ? '#ffff00' : '#00ffff',
+              textShadow: activeIndex === idx ? '0 0 15px #ffff00' : '0 0 10px #00ffff',
+              cursor: 'pointer',
+              boxShadow: activeIndex === idx ? '0 0 20px rgba(255, 255, 0, 0.5)' : 'none',
+            }}
+            onClick={() => setActiveIndex(idx)}
+            >
+              {letter}
+            </div>
+            
+            <button
+              onClick={() => cycleDown(idx)}
+              style={{
+                width: isMobile ? '40px' : '50px',
+                height: isMobile ? '30px' : '36px',
+                backgroundColor: activeIndex === idx ? '#ff00de' : '#333',
+                border: '2px solid #00ffff',
+                borderRadius: '4px',
+                color: '#00ffff',
+                fontSize: isMobile ? '16px' : '20px',
+                cursor: 'pointer',
+                fontFamily: '"Press Start 2P", monospace',
+              }}
+              onFocus={() => setActiveIndex(idx)}
+            >
+              ▼
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      <p style={{
+        color: '#666',
+        fontSize: isMobile ? '6px' : '8px',
+        marginBottom: '20px',
+      }}>
+        {isMobile ? 'TAP ARROWS TO CHANGE' : 'USE ← → TO SELECT, ↑ ↓ TO CHANGE'}
+      </p>
+      
+      <button
+        onClick={handleSubmit}
+        style={{
+          padding: isMobile ? '12px 24px' : '14px 32px',
+          backgroundColor: '#00ff00',
+          color: '#000',
+          fontWeight: 'bold',
+          fontSize: isMobile ? '10px' : '12px',
+          borderRadius: '4px',
+          border: '3px solid #fff',
+          cursor: 'pointer',
+          fontFamily: '"Press Start 2P", monospace',
+          boxShadow: '0 0 20px #00ff00, 0 6px 0 #006600',
+          textShadow: 'none',
+          letterSpacing: '2px',
+        }}
+      >
+        CONTINUE
+      </button>
+    </div>
+  );
+};
+
 export default function SocksGame() {
   const [maze, setMaze] = useState(() => generateMaze());
   const [socks, setSocks] = useState({ x: 1, y: 1, direction: 'right' });
@@ -964,6 +1157,39 @@ export default function SocksGame() {
   
   // Secret level selector
   const [showLevelSelect, setShowLevelSelect] = useState(false);
+  
+  // High score system
+  const [highScores, setHighScores] = useState(() => {
+    try {
+      const saved = localStorage.getItem('socksBoneHuntHighScores');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showHighScoreEntry, setShowHighScoreEntry] = useState(false);
+  const [pendingScore, setPendingScore] = useState(null);
+  
+  // Check if score qualifies for high score board
+  const isHighScore = (newScore) => {
+    if (newScore === 0) return false;
+    if (highScores.length < 5) return true;
+    return newScore > highScores[highScores.length - 1].score;
+  };
+  
+  // Save high score to localStorage
+  const saveHighScore = (name, newScore) => {
+    const newEntry = { name, score: newScore, date: new Date().toISOString() };
+    const updated = [...highScores, newEntry]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+    setHighScores(updated);
+    try {
+      localStorage.setItem('socksBoneHuntHighScores', JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Could not save high scores:', e);
+    }
+  };
   
   // Special items system
   const [specialItem, setSpecialItem] = useState(null); // { type: 'drumstick'|'pizza'|'cookie'|'tennis'|'cheese', x, y }
@@ -1115,6 +1341,45 @@ export default function SocksGame() {
     setShowSpawnAnimation(true);
     setTimeout(() => setShowSpawnAnimation(false), 1500);
   }, [createCatchers]);
+
+  // Handle game won - check for high score
+  const handleGameWon = useCallback((finalScore) => {
+    if (isHighScore(finalScore)) {
+      setPendingScore({ score: finalScore, type: 'won' });
+      setShowHighScoreEntry(true);
+      setGameState('paused'); // Pause game during high score entry
+    } else {
+      setGameState('won');
+    }
+  }, [isHighScore]);
+  
+  // Handle game lost - check for high score  
+  const handleGameLost = useCallback((finalScore) => {
+    if (isHighScore(finalScore)) {
+      setPendingScore({ score: finalScore, type: 'lost' });
+      setShowHighScoreEntry(true);
+      setGameState('paused'); // Pause game during high score entry
+    } else {
+      setGameState('lost');
+    }
+  }, [isHighScore]);
+  
+  // Handle high score submission
+  const handleHighScoreSubmit = useCallback((name) => {
+    if (pendingScore) {
+      saveHighScore(name, pendingScore.score);
+      setShowHighScoreEntry(false);
+      // Show the appropriate end screen briefly, then go to start
+      // Actually, per requirements, go directly to start screen
+      setGameState('start');
+      setPendingScore(null);
+      // Reset game state for next play
+      setLevel(1);
+      setLives(3);
+      setScore(0);
+      setCollectedSpecials([]);
+    }
+  }, [pendingScore, saveHighScore]);
 
   const initGame = useCallback(() => {
     setLevel(1);
@@ -1373,7 +1638,6 @@ export default function SocksGame() {
     
     if (onCouch) {
       setHeldDirection(null);
-      setGameState('won');
       setHasDogTreat(false);
       // Spawn lots of fireworks for final win!
       const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#FF69B4', '#00FF00', '#FF4500', '#9B59B6', '#3498DB'];
@@ -1387,8 +1651,10 @@ export default function SocksGame() {
         });
       }
       setFireworks(winFireworks);
+      // Check for high score (score is current score from state)
+      handleGameWon(score);
     }
-  }, [socks.x, socks.y, hasDogTreat, gameState, couchPosition]);
+  }, [socks.x, socks.y, hasDogTreat, gameState, couchPosition, score, handleGameWon]);
 
   // Move catchers independently on their own timer (speed based on level)
   useEffect(() => {
@@ -1510,13 +1776,13 @@ export default function SocksGame() {
         setLives(newLives);
         
         if (newLives <= 0) {
-          setGameState('lost');
+          handleGameLost(score);
         } else {
           setGameState('caught');
         }
       }
     }
-  }, [socks, catchers, lives, gameState, couchPosition, catchersFrozen, cellSize, findValidCatcherSpawn]);
+  }, [socks, catchers, lives, gameState, couchPosition, catchersFrozen, cellSize, findValidCatcherSpawn, score, handleGameLost]);
 
   const resumeAfterCatch = useCallback(() => {
     setSocks({ x: 1, y: 1, direction: 'right' });
@@ -2141,8 +2407,8 @@ export default function SocksGame() {
       </div>
       )}
 
-      {/* Paused overlay - only show if not showing treat message */}
-      {gameState === 'paused' && !showTreatMessage && (
+      {/* Paused overlay - only show if not showing treat message or high score entry */}
+      {gameState === 'paused' && !showTreatMessage && !showHighScoreEntry && (
         <div style={{
           position: 'absolute',
           zIndex: 20,
@@ -2270,7 +2536,7 @@ export default function SocksGame() {
           zIndex: 20,
           backgroundColor: 'rgba(0, 0, 20, 0.95)',
           borderRadius: '8px',
-          padding: isMobile ? '24px' : '40px',
+          padding: isMobile ? '20px' : '32px',
           textAlign: 'center',
           border: '4px solid #00ffff',
           boxShadow: '0 0 30px rgba(0, 255, 255, 0.5), 0 0 60px rgba(255, 0, 222, 0.3), inset 0 0 30px rgba(0, 255, 255, 0.1)',
@@ -2281,33 +2547,62 @@ export default function SocksGame() {
             fontSize: isMobile ? '0.9rem' : '1.2rem', 
             fontWeight: 'bold', 
             color: '#ffff00', 
-            marginBottom: '20px',
+            marginBottom: '16px',
             textShadow: '0 0 10px #ffff00, 0 0 20px #ff8800, 0 0 30px #ff8800',
             letterSpacing: '2px',
           }}>
             🐕 SOCKS' BONE HUNT 🦴
           </h2>
-          <p style={{ color: '#00ffff', marginBottom: '12px', fontSize: isMobile ? '8px' : '10px', lineHeight: '1.8' }}>
-            HELP SOCKS COLLECT ALL THE BONES!
+          
+          {/* High Scores Table */}
+          {highScores.length > 0 && (
+            <div style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              border: '2px solid #ff00de',
+              borderRadius: '4px',
+              padding: isMobile ? '10px' : '14px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ 
+                color: '#ff00de', 
+                fontSize: isMobile ? '8px' : '10px', 
+                marginBottom: '10px',
+                textShadow: '0 0 10px #ff00de',
+              }}>
+                🏆 HIGH SCORES 🏆
+              </div>
+              {highScores.map((entry, idx) => (
+                <div key={idx} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: isMobile ? '7px' : '9px',
+                  color: idx === 0 ? '#ffff00' : '#00ffff',
+                  marginBottom: '4px',
+                  textShadow: idx === 0 ? '0 0 8px #ffff00' : 'none',
+                }}>
+                  <span>{idx + 1}. {entry.name}</span>
+                  <span>{entry.score.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <p style={{ color: '#00ffff', marginBottom: '8px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
+            COLLECT ALL THE BONES!
           </p>
-          <p style={{ color: '#ff00de', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
-            USE ARROW KEYS TO MOVE
+          <p style={{ color: '#00ff00', marginBottom: '8px', fontSize: isMobile ? '6px' : '8px', lineHeight: '1.8' }}>
+            🛋️ COUCH = SAFE ZONE
           </p>
-          <p style={{ color: '#00ff00', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
-            🛋️ HIDE ON THE COUCH TO STAY SAFE!
+          <p style={{ color: '#ffff00', marginBottom: '8px', fontSize: isMobile ? '6px' : '8px', lineHeight: '1.8' }}>
+            🍗🍕🍪🎾🧀 = 1000 PTS
           </p>
-          <p style={{ color: '#ffff00', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
-            🍗🍕🍪🎾🧀 CATCH SPECIALS = 1000 PTS
-          </p>
-          <p style={{ color: '#ff6600', marginBottom: '12px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
-            ⚠️ MORE CATCHERS EACH LEVEL!
-          </p>
-          <p style={{ color: '#ff69b4', marginBottom: '20px', fontSize: isMobile ? '7px' : '9px', lineHeight: '1.8' }}>
-            💝 FINAL BOSS: BRING DAISY A TREAT!
+          <p style={{ color: '#ff69b4', marginBottom: '16px', fontSize: isMobile ? '6px' : '8px', lineHeight: '1.8' }}>
+            💝 BRING DAISY A TREAT TO WIN!
           </p>
           <div style={{ 
             color: '#888', 
-            marginBottom: '24px', 
+            marginBottom: '16px', 
             fontSize: isMobile ? '6px' : '8px',
             animation: 'blink 1s infinite',
           }}>
@@ -2333,9 +2628,26 @@ export default function SocksGame() {
           >
             START GAME
           </button>
-          <p style={{ color: '#666', marginTop: '20px', fontSize: isMobile ? '6px' : '7px' }}>
+          <p style={{ color: '#666', marginTop: '16px', fontSize: isMobile ? '6px' : '7px' }}>
             © 2024 SOCKS ARCADE
           </p>
+        </div>
+      )}
+
+      {/* High Score Entry Overlay */}
+      {showHighScoreEntry && pendingScore && (
+        <div style={{
+          position: 'absolute',
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <HighScoreEntry 
+            score={pendingScore.score}
+            onSubmit={handleHighScoreSubmit}
+            isMobile={isMobile}
+          />
         </div>
       )}
 
